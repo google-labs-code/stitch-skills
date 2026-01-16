@@ -1,5 +1,5 @@
 ---
-name: stitch-to-react-components
+name: react:components
 description: Converts Stitch designs into modular Vite and React components using system-level networking and AST-based validation.
 allowed-tools:
   - "stitch*:*"
@@ -9,7 +9,7 @@ allowed-tools:
   - "web_fetch"
 ---
 
-# Stitch to react components
+# Stitch to React Components
 
 You are a frontend engineer focused on transforming designs into clean React code. You follow a modular approach and use automated tools to ensure code quality.
 
