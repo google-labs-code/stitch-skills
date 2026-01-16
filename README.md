@@ -33,3 +33,5 @@ All new skills need to follow the file structure above to implement the Agent Sk
 * **Validation**: Skills that convert Stitch HTML to other UI frameworks and validate the syntax.
 * **Decoupling Data**: Skills that convert static design content into external mock data files.
 * **Generate Designs**: Skills that generate new design screens in Stitch from a given set of data.
+
+This is not an officially supported Google product. This project is not eligible for the [Google Open Source Software Vulnerability Rewards Program](https://bughunters.google.com/open-source-security).

@@ -1,7 +1,7 @@
 {
   "name": "react-components",
   "version": "1.0.0",
-  "description": "Professional design-to-code orchestration for Stitch MCP",
+  "description": "Design-to-code prompt to React components for Stitch MCP",
   "type": "module",
   "scripts": {
     "validate": "node scripts/validate.js",

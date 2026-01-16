@@ -26,6 +26,7 @@ You are a frontend engineer focused on transforming designs into clean React cod
 * **Logic isolation**: Move event handlers and business logic into custom hooks in `src/hooks/`.
 * **Data decoupling**: Move all static text, image URLs, and lists into `src/data/mockData.ts`.
 * **Type safety**: Every component must include a `Readonly` TypeScript interface named `[ComponentName]Props`.
+* **Project specific**: Focus on the target project's needs and constraints. Leave Google license headers out of the generated React components.
 * **Style mapping**:
     * Extract the `tailwind.config` from the HTML `<head>`.
     * Sync these values with `resources/style-guide.json`.
