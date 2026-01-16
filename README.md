@@ -1,56 +1,35 @@
-# Stitch to React Agent Skills
+# Stitch Agent Skills
 
-A library of specialized agent skills designed to convert Stitch MCP designs into modular, production-ready Vite + React + TypeScript components.
+A library of Agent Skills designed to work with the Stitch MCP server. Each skill follows the Agent Skills open standard, for compatibility with coding agents such as Antigravity, Gemini CLI, Claude Code, Cursor.
 
-## Quick Start
+## Installation & Discovery
 
-The fastest way to use these skills is via the `add-skill` CLI. This will automatically detect your coding agent (Claude Code, Cursor, Antigravity, etc.) and install the skill into the correct directory.
+Install any skill from this repository using the `add-skill` CLI. This command will automatically detect your active coding agents and place the skill in the appropriate directory.
 
 ```bash
-# Install the core component skill globally
-npx add-skill davideast/stitch-to-react-skills --skill stitch-to-react-components --global
+# List all available skills in this repository
+npx add-skill google-labs-code/stitch-skills --list
 
+# Install a specific skill (e.g., Stitch to React Components)
+npx add-skill google-labs-code/stitch-skills --skill react:components --global
 ```
-
-## Available Skills
-
-| Skill Name | Description | Path |
-| --- | --- | --- |
-| `stitch-to-react-components` | Converts designs into modular components with AST validation and custom networking. | `skills/stitch-to-react-components` |
 
 ## Repository Structure
 
-This repository follows the **Agent Skills** open standard. Each skill is self-contained with its own logic, validation scripts, and design tokens.
+Every directory within `skills/` follows a standardized structure to ensure the AI agent has everything it needs to perform "few-shot" learning and automated quality checks.
 
 ```text
-skills/stitch-to-react-components/
-├── SKILL.md           — Core instructions & workflow
-├── package.json       — Validator dependencies
-├── scripts/           — Networking & AST validation
-├── resources/         — Style guides & API references
-└── examples/          — Gold-standard code samples
+skills/[category]/
+├── SKILL.md           — The "Mission Control" for the agent
+├── scripts/           — Executable enforcers (Validation & Networking)
+├── resources/         — The knowledge base (Checklists & Style Guides)
+└── examples/          — The "Gold Standard" syntactically valid references
 ```
 
-## How it Works
+## Adding New Skills
+All new skills need to follow the file structure above to implement the Agent Skills open standard.
 
-When activated, the agent follows a high-fidelity engineering pipeline:
-
-1. **Retrieval**: Uses a system-level `curl` script to bypass TLS/SNI issues on Google Cloud Storage.
-2. **Mapping**: Cross-references Stitch metadata with the local `style-guide.json` to ensure token consistency.
-3. **Generation**: Scaffolds components using a strict Atomic Design pattern.
-4. **Validation**: Runs an automated AST check using `@swc/core` to prevent hardcoded hex values or missing interfaces.
-5. **Audit**: Performs a final self-correction check against a 20-point architecture checklist.
-
-## Requirements
-
-* **Node.js**: v18 or higher (for the validation scripts).
-* **Stitch MCP Server**: Must be configured in your IDE/CLI.
-* **Environment**: A React + Vite + Tailwind project.
-
-## Development
-
-To add a new skill to this repository:
-
-1. Create a new directory under `skills/`.
-2. Ensure it contains a `SKILL.md` with a valid `name` and `description` in the YAML frontmatter.
-3. Push to GitHub; `add-skill` will automatically discover the new entry.
+### Great candidates for new skills
+* **Validation**: Skills that convert Stitch HTML to other UI frameworks and validate the syntax.
+* **Decoupling Data**: Skills that convert static design content into external mock data files.
+* **Generate Designs**: Skills that generate new design screens in Stitch from a given set of data.

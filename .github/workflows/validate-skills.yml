@@ -1,0 +1,30 @@
+name: Validate Skills
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate-stitch-to-react:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: skills/react-components
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+        cache-dependency-path: skills/react-components/package-lock.json
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Verify Gold Standard Example
+      run: node scripts/validate.js examples/gold-standard-card.tsx

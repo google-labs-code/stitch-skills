@@ -9,6 +9,9 @@ async function validateComponent(filePath) {
     const ast = await swc.parse(code, { syntax: "typescript", tsx: true });
     let hasInterface = false;
     let tailwindIssues = [];
+
+    console.log("🔍 Scanning AST...");
+
     const walk = (node) => {
       if (!node) return;
       if (node.type === 'TsInterfaceDeclaration' && node.id.value.endsWith('Props')) hasInterface = true;
@@ -18,11 +21,32 @@ async function validateComponent(filePath) {
       for (const key in node) { if (node[key] && typeof node[key] === 'object') walk(node[key]); }
     };
     walk(ast);
-    console.log(`--- Validation: ${filename} ---`);
-    if (!hasInterface) console.error("❌ MISSING: Props interface.");
-    if (tailwindIssues.length > 0) console.error("❌ STYLE: Hex codes found.");
-    process.exit((hasInterface && tailwindIssues.length === 0) ? 0 : 1);
-  } catch (err) { console.error("❌ PARSE ERROR"); process.exit(1); }
+
+    console.log(`--- Validation for: ${filename} ---`);
+    if (hasInterface) {
+      console.log("✅ Props declaration found.");
+    } else {
+      console.error("❌ MISSING: Props interface (must end in 'Props').");
+    }
+
+    if (tailwindIssues.length === 0) {
+      console.log("✅ No hardcoded hex values found.");
+    } else {
+      console.error(`❌ STYLE: Found ${tailwindIssues.length} hardcoded hex codes.`);
+      tailwindIssues.forEach(hex => console.error(`   - ${hex}`));
+    }
+
+    if (hasInterface && tailwindIssues.length === 0) {
+      console.log("\n✨ COMPONENT VALID.");
+      process.exit(0);
+    } else {
+      console.error("\n🚫 VALIDATION FAILED.");
+      process.exit(1);
+    }
+  } catch (err) {
+    console.error("❌ PARSE ERROR:", err.message);
+    process.exit(1);
+  }
 }
 
 validateComponent(process.argv[2]);
