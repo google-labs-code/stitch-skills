@@ -14,9 +14,17 @@ npx add-skill google-labs-code/stitch-skills --list
 npx add-skill google-labs-code/stitch-skills --skill react:components --global
 ```
 
+## Available Skills
+
+### design-md
+Analyzes Stitch projects and generates comprehensive `DESIGN.md` files documenting design systems in natural, semantic language optimized for Stitch screen generation.
+
+### react-components
+Converts Stitch screens to React component systems with automated validation and design token consistency.
+
 ## Repository Structure
 
-Every directory within `skills/` follows a standardized structure to ensure the AI agent has everything it needs to perform "few-shot" learning and automated quality checks.
+Every directory within `skills/` or at the root level follows a standardized structure to ensure the AI agent has everything it needs to perform "few-shot" learning and automated quality checks.
 
 ```text
 skills/[category]/

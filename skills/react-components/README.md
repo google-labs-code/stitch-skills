@@ -1,5 +1,11 @@
 # Stitch to React Components Skill
 
+## Install
+
+```bash
+npx add-skill google-labs-code/stitch-skills --skill react:components --global
+```
+
 ## Example Prompt
 
 ```text
