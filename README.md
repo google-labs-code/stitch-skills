@@ -10,7 +10,7 @@ Install any skill from this repository using the `add-skill` CLI. This command w
 # List all available skills in this repository
 npx add-skill google-labs-code/stitch-skills --list
 
-# Install a specific skill (e.g., Stitch to React Components)
+# Install a specific skill
 npx add-skill google-labs-code/stitch-skills --skill react:components --global
 ```
 
@@ -19,8 +19,30 @@ npx add-skill google-labs-code/stitch-skills --skill react:components --global
 ### design-md
 Analyzes Stitch projects and generates comprehensive `DESIGN.md` files documenting design systems in natural, semantic language optimized for Stitch screen generation.
 
+```bash
+npx add-skill google-labs-code/stitch-skills --skill design-md --global
+```
+
 ### react-components
 Converts Stitch screens to React component systems with automated validation and design token consistency.
+
+```bash
+npx add-skill google-labs-code/stitch-skills --skill react:components --global
+```
+
+### stitch-loop
+Generates a complete multi-page website from a single prompt using Stitch, with automated file organization and validation.
+
+```bash
+npx add-skill google-labs-code/stitch-skills --skill stitch-loop --global
+```
+
+### enhance-prompt
+Transforms vague UI ideas into polished, Stitch-optimized prompts. Enhances specificity, adds UI/UX keywords, injects design system context, and structures output for better generation results.
+
+```bash
+npx add-skill google-labs-code/stitch-skills --skill enhance-prompt --global
+```
 
 ## Repository Structure
 
