@@ -44,6 +44,13 @@ Transforms vague UI ideas into polished, Stitch-optimized prompts. Enhances spec
 npx add-skill google-labs-code/stitch-skills --skill enhance-prompt --global
 ```
 
+### remotion
+Generates walkthrough videos from Stitch projects using Remotion with smooth transitions, zooming, and text overlays to showcase app screens professionally.
+
+```bash
+npx add-skill google-labs-code/stitch-skills --skill remotion --global
+```
+
 ## Repository Structure
 
 Every directory within `skills/` or at the root level follows a standardized structure to ensure the AI agent has everything it needs to perform "few-shot" learning and automated quality checks.
