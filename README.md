@@ -44,6 +44,13 @@ Transforms vague UI ideas into polished, Stitch-optimized prompts. Enhances spec
 npx skills add google-labs-code/stitch-skills --skill enhance-prompt --global
 ```
 
+### remotion
+Generates walkthrough videos from Stitch projects using Remotion with smooth transitions, zooming, and text overlays to showcase app screens professionally.
+
+```bash
+npx add-skill google-labs-code/stitch-skills --skill remotion --global
+```
+
 ### shadcn-ui
 Expert guidance for integrating and building applications with shadcn/ui components. Helps discover, install, customize, and optimize shadcn/ui components with best practices for React applications.
 
