@@ -51,6 +51,13 @@ Generates walkthrough videos from Stitch projects using Remotion with smooth tra
 npx add-skill google-labs-code/stitch-skills --skill remotion --global
 ```
 
+### shadcn-ui
+Expert guidance for integrating and building applications with shadcn/ui components. Helps discover, install, customize, and optimize shadcn/ui components with best practices for React applications.
+
+```bash
+npx skills add google-labs-code/stitch-skills --skill shadcn-ui --global
+```
+
 ## Repository Structure
 
 Every directory within `skills/` or at the root level follows a standardized structure to ensure the AI agent has everything it needs to perform "few-shot" learning and automated quality checks.
