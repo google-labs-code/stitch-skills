@@ -3,7 +3,7 @@
 ## Install
 
 ```bash
-npx add-skill google-labs-code/stitch-skills --skill design-md --global
+npx skills add google-labs-code/stitch-skills --skill design-md --global
 ```
 
 ## Example Prompt
