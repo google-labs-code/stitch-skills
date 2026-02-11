@@ -43,7 +43,7 @@ This skill bridges Stitch (UI design platform) and Remotion (programmatic video 
 Install this skill using:
 
 ```bash
-npx add-skill google-labs-code/stitch-skills --skill remotion --global
+npx skills add google-labs-code/stitch-skills --skill remotion --global
 ```
 
 ## File Structure

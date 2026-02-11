@@ -3,7 +3,7 @@
 ## Install
 
 ```bash
-npx add-skill google-labs-code/stitch-skills --skill enhance-prompt --global
+npx skills add google-labs-code/stitch-skills --skill enhance-prompt --global
 ```
 
 ## Example Prompt

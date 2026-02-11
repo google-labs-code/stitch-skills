@@ -48,7 +48,7 @@ npx skills add google-labs-code/stitch-skills --skill enhance-prompt --global
 Generates walkthrough videos from Stitch projects using Remotion with smooth transitions, zooming, and text overlays to showcase app screens professionally.
 
 ```bash
-npx add-skill google-labs-code/stitch-skills --skill remotion --global
+npx skills add google-labs-code/stitch-skills --skill remotion --global
 ```
 
 ### shadcn-ui
