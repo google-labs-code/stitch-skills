@@ -79,3 +79,9 @@ All new skills need to follow the file structure above to implement the Agent Sk
 * **Generate Designs**: Skills that generate new design screens in Stitch from a given set of data.
 
 This is not an officially supported Google product. This project is not eligible for the [Google Open Source Software Vulnerability Rewards Program](https://bughunters.google.com/open-source-security).
+
+## Compatible Agents
+
+These skills work with:
+- [Claude Code](https://claude.com/product/claude-code)
+- [AdaL](https://sylph.ai/) - Self-evolving AI coding agent ([Docs](https://docs.sylph.ai/) | [GitHub](https://github.com/SylphAI-Inc/adal-cli))
