@@ -102,12 +102,15 @@ if [ -f "package.json" ]; then
     echo ""
     echo "📦 Checking dependencies..."
     
+    # Read package.json once
+    PACKAGE_JSON_CONTENT=$(<package.json)
+
     # Required dependencies
     REQUIRED_DEPS=("react" "tailwindcss")
     RECOMMENDED_DEPS=("class-variance-authority" "clsx" "tailwind-merge" "tailwindcss-animate")
     
     for dep in "${REQUIRED_DEPS[@]}"; do
-        if grep -q "\"$dep\"" package.json; then
+        if [[ "$PACKAGE_JSON_CONTENT" == *"\"$dep\""* ]]; then
             echo -e "${GREEN}✓${NC} $dep installed"
         else
             echo -e "${RED}✗${NC} $dep not installed"
@@ -117,7 +120,7 @@ if [ -f "package.json" ]; then
     echo ""
     echo "Recommended dependencies:"
     for dep in "${RECOMMENDED_DEPS[@]}"; do
-        if grep -q "\"$dep\"" package.json; then
+        if [[ "$PACKAGE_JSON_CONTENT" == *"\"$dep\""* ]]; then
             echo -e "${GREEN}✓${NC} $dep installed"
         else
             echo -e "${YELLOW}⚠${NC} $dep not installed (recommended)"
