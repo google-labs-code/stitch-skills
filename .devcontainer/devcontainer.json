@@ -9,6 +9,10 @@
       "ZSH_IN_DOCKER_VERSION": "1.2.0"
     }
   },
+  "features": {
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
   "runArgs": ["--cap-add=NET_ADMIN", "--cap-add=NET_RAW"],
   "customizations": {
     "vscode": {
@@ -16,7 +20,6 @@
         "anthropic.claude-code",
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
-        // "eamodio.gitlens",
         // "GoogleCloudTools.cloudcode",
         // "Google.geminicodeassist",
         // "google.gemini-cli-vscode-ide-companion",
@@ -45,10 +48,13 @@
   },
   "remoteUser": "node",
   "mounts": [
-    "source=claude-code-config-${devcontainerId},target=/home/node/.claude,type=volume",
-    "source=claude-code-gh-${devcontainerId},target=/home/node/.config/gh,type=volume",
+    "source=claude-code-config-homedev,target=/home/node/.claude,type=volume",
+    "source=claude-code-gh-homedev,target=/home/node/.config/gh,type=volume",
+    // "source=${localEnv:HOME}/.claude,target=/home/node/.claude,type=bind",
+    // "source=${localEnv:HOME}/.config/gh,target=/home/node/.config/gh,type=bind",
     "source=${localEnv:HOME}/.gitconfig,target=/home/node/.gitconfig,type=bind,readonly",
-    "source=${localWorkspaceFolder}/.devcontainer,target=/workspace/.devcontainer,type=bind,readonly"
+    "source=${localWorkspaceFolder}/.devcontainer,target=/workspace/.devcontainer,type=bind"
+    // ,readonly"
     // "source=${localEnv:HOME}${localEnv:USERPROFILE}/.claude,target=/home/node/.claude,type=bind",
     // "source=${localEnv:HOME}${localEnv:USERPROFILE}/.gemini,target=/home/node/.gemini,type=bind",
     // "source=${localEnv:HOME}${localEnv:USERPROFILE}/.copilot,target=/home/node/.copilot,type=bind"
