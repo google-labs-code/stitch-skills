@@ -1,0 +1,67 @@
+{
+  "name": "Agent Sandbox - ${localWorkspaceFolder}",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "args": {
+      "TZ": "${localEnv:TZ:America/Chicago}",
+      "CLAUDE_CODE_VERSION": "latest",
+      "GIT_DELTA_VERSION": "0.18.2",
+      "ZSH_IN_DOCKER_VERSION": "1.2.0"
+    }
+  },
+  "runArgs": ["--cap-add=NET_ADMIN", "--cap-add=NET_RAW"],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "anthropic.claude-code",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        // "eamodio.gitlens",
+        // "GoogleCloudTools.cloudcode",
+        // "Google.geminicodeassist",
+        // "google.gemini-cli-vscode-ide-companion",
+        "Bhsd.vscode-extension-wikiparser",
+        "RoweWilsonFrederiskHolme.wikitext",
+        "bierner.markdown-mermaid"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit"
+        },
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "terminal.integrated.profiles.linux": {
+          "bash": {
+            "path": "bash",
+            "icon": "terminal-bash"
+          },
+          "zsh": {
+            "path": "zsh"
+          }
+        }
+      }
+    }
+  },
+  "remoteUser": "node",
+  "mounts": [
+    "source=claude-code-config-${devcontainerId},target=/home/node/.claude,type=volume",
+    "source=claude-code-gh-${devcontainerId},target=/home/node/.config/gh,type=volume",
+    "source=${localEnv:HOME}/.gitconfig,target=/home/node/.gitconfig,type=bind,readonly",
+    "source=${localWorkspaceFolder}/.devcontainer,target=/workspace/.devcontainer,type=bind,readonly"
+    // "source=${localEnv:HOME}${localEnv:USERPROFILE}/.claude,target=/home/node/.claude,type=bind",
+    // "source=${localEnv:HOME}${localEnv:USERPROFILE}/.gemini,target=/home/node/.gemini,type=bind",
+    // "source=${localEnv:HOME}${localEnv:USERPROFILE}/.copilot,target=/home/node/.copilot,type=bind"
+  ],
+  "containerEnv": {
+    "NODE_OPTIONS": "--max-old-space-size=4096",
+    "CLAUDE_CONFIG_DIR": "/home/node/.claude",
+    "POWERLEVEL9K_DISABLE_GITSTATUS": "true",
+    "PI_CODING_AGENT_DIR": "/workspace/.pi/agent"
+    // "PI_PACKAGE_DIR": "/workspace/.pi/agent"
+  },
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
+  "workspaceFolder": "/workspace"
+  // "postStartCommand": "sudo /usr/local/bin/init-firewall.sh",
+  // "waitFor": "postStartCommand"
+}
