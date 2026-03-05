@@ -85,8 +85,8 @@ Use the Stitch MCP tools to generate the page:
 1. **Discover namespace**: Run `list_tools` to find the Stitch MCP prefix
 2. **Get or create project**: 
    - If `.stitch/metadata.json` exists, use the `projectId` from it
-   - Otherwise, call `[prefix]:create_project` and save the result to `.stitch/metadata.json`
-   - After generating each screen, add its ID to the `screens` map in `.stitch/metadata.json`
+   - Otherwise, call `[prefix]:create_project`, then call `[prefix]:get_project` to retrieve full project details, and save them to `.stitch/metadata.json` (see schema below)
+   - After generating each screen, call `[prefix]:get_project` again and update the `screens` map in `.stitch/metadata.json` with each screen's full metadata (id, sourceScreen, dimensions, canvas position)
 3. **Generate screen**: Call `[prefix]:generate_screen_from_text` with:
    - `projectId`: The project ID
    - `prompt`: The full prompt from the baton (including design system block)
@@ -170,24 +170,59 @@ project/
 
 ### `.stitch/metadata.json` Schema
 
-This file persists all Stitch identifiers so future iterations can reference them for edits or variants.
+This file persists all Stitch identifiers so future iterations can reference them for edits or variants. Populate it by calling `[prefix]:get_project` after creating a project or generating screens.
 
 ```json
 {
+  "name": "projects/6139132077804554844",
   "projectId": "6139132077804554844",
-  "projectName": "My App",
+  "title": "My App",
+  "visibility": "PRIVATE",
+  "createTime": "2026-03-04T23:11:25.514932Z",
+  "updateTime": "2026-03-04T23:34:40.400007Z",
+  "projectType": "PROJECT_DESIGN",
+  "origin": "STITCH",
+  "deviceType": "MOBILE",
+  "designTheme": {
+    "colorMode": "DARK",
+    "font": "INTER",
+    "roundness": "ROUND_EIGHT",
+    "customColor": "#40baf7",
+    "saturation": 3
+  },
   "screens": {
-    "index": "d7237c7d78f44befa4f60afb17c818c1",
-    "about": "bf6a3fe5c75348e58cf21fc7a9ddeafb"
+    "index": {
+      "id": "d7237c7d78f44befa4f60afb17c818c1",
+      "sourceScreen": "projects/6139132077804554844/screens/d7237c7d78f44befa4f60afb17c818c1",
+      "x": 0,
+      "y": 0,
+      "width": 390,
+      "height": 1249
+    },
+    "about": {
+      "id": "bf6a3fe5c75348e58cf21fc7a9ddeafb",
+      "sourceScreen": "projects/6139132077804554844/screens/bf6a3fe5c75348e58cf21fc7a9ddeafb",
+      "x": 549,
+      "y": 0,
+      "width": 390,
+      "height": 1159
+    }
+  },
+  "metadata": {
+    "userRole": "OWNER"
   }
 }
 ```
 
 | Field | Description |
 |-------|-------------|
-| `projectId` | Stitch project ID (from `create_project` response `name` field) |
-| `projectName` | Human-readable project title |
-| `screens` | Map of page name → screen ID. Add an entry each time a screen is generated. Screen IDs are needed for `edit_screens` and `generate_variants`. |
+| `name` | Full resource name (`projects/{id}`) |
+| `projectId` | Stitch project ID (from `create_project` or `get_project`) |
+| `title` | Human-readable project title |
+| `designTheme` | Design system tokens: color mode, font, roundness, custom color, saturation |
+| `deviceType` | Target device: `MOBILE`, `DESKTOP`, `TABLET` |
+| `screens` | Map of page name → screen object. Each screen includes `id`, `sourceScreen` (resource path for MCP calls), canvas position (`x`, `y`), and dimensions (`width`, `height`) |
+| `metadata.userRole` | User's role on the project (`OWNER`, `EDITOR`, `VIEWER`) |
 
 ## Orchestration Options
 
