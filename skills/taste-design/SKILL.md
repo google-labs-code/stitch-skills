@@ -36,7 +36,7 @@ Evaluate the target project's intent. Use evocative adjectives from the taste sp
 - **Variance:** "Predictable Symmetric" (1–3) → "Offset Asymmetric" (4–7) → "Artsy Chaotic" (8–10)
 - **Motion:** "Static Restrained" (1–3) → "Fluid CSS" (4–7) → "Cinematic Choreography" (8–10)
 
-Default baseline: Variance 8, Motion 6, Density 4. Adapt dynamically based on user's vibe description.
+Default baseline: Creativity 9, Variance 8, Motion 6, Density 5. Adapt dynamically based on user's vibe description.
 
 ### 2. Map the Color Palette
 For each color provide: **Descriptive Name** + **Hex Code** + **Functional Role**.
