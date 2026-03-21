@@ -111,6 +111,9 @@ Encode these as explicit "NEVER DO" rules in the DESIGN.md:
 - No 3-column equal card layouts
 - No generic names ("John Doe", "Acme", "Nexus")
 - No fake round numbers (`99.99%`, `50%`)
+- No fabricated data or statistics — never generate metrics, performance numbers, uptime percentages, response times, or any data that the user did not explicitly provide. "99.98% UPTIME SLA", "124ms AVG. RESPONSE", "18.5k DEPLOY CYCLES" are invented AI filler. If real data is not available, use clear placeholder labels like `[metric]` instead of making up numbers
+- No fake system/metric sections — "SYSTEM PERFORMANCE METRICS", "KEY STATISTICS", "BY THE NUMBERS" dashboard cards filled with invented data are BANNED
+- No `LABEL // YEAR` formatting — "SYSTEM // 2024", "METRICS // 2025" is a lazy AI convention, not real design typography
 - No AI copywriting clichés ("Elevate", "Seamless", "Unleash", "Next-Gen")
 - No filler UI text: "Scroll to explore", "Swipe down", scroll arrows, bouncing chevrons
 - No broken Unsplash links — use `picsum.photos` or SVG avatars
