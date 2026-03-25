@@ -7,7 +7,7 @@
 - [ ] All static text, image URIs, and list data moved to `src/data/mockData.ts`.
 
 ### Type safety and syntax
-- [ ] Every component has a `Readonly<T>` Props interface exported from the file.
+- [ ] Every component exports a `[ComponentName]Props` interface with `readonly` property modifiers.
 - [ ] File is syntactically valid TypeScript (no parse errors).
 - [ ] Placeholders from template (e.g., `StitchComponent`) have been replaced with actual names.
 - [ ] Navigation screen params are typed with `NativeStackScreenProps` or equivalent.

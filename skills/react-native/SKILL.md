@@ -39,7 +39,7 @@ Map HTML elements to React Native components using these rules:
 | `<input>` | `TextInput` | Map `placeholder`, `value`, `onChangeText`. |
 | `<scroll container>` | `ScrollView` | For short lists only. Use `FlatList` for long or dynamic lists. |
 | `<ul>`/`<ol>` with many items | `FlatList` | Requires `data`, `renderItem`, `keyExtractor`. |
-| `<section>` with tabs | `SectionList` | For grouped data with headers. |
+| `<section>` with grouped data | `SectionList` | For grouped data with headers. Use tab navigator for tab-based layouts. |
 | `<select>` | Third-party picker or custom modal | React Native has no built-in select. |
 | `<svg>` | `react-native-svg` | Convert SVG markup to `Svg`, `Path`, `Circle`, etc. |
 | Root wrapper | `SafeAreaView` | Wrap top-level screens to avoid notch/status bar overlap. |
@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
 * **Atomic Design**: Organize components as atoms (buttons, labels, icons), molecules (input groups, cards), and organisms (headers, lists, forms). Place them in `src/components/atoms/`, `src/components/molecules/`, `src/components/organisms/`.
 * **Logic isolation**: Move event handlers, API calls, and business logic into custom hooks in `src/hooks/`. Components should only handle rendering.
 * **Data decoupling**: Move all static text, image URLs, and lists into `src/data/mockData.ts`. Components receive data through props.
-* **Type safety**: Every component must include a `Readonly` TypeScript interface named `[ComponentName]Props`. Export the interface.
+* **Type safety**: Every component must export a TypeScript interface named `[ComponentName]Props` with `readonly` property modifiers.
 * **No hardcoded styles**: Extract colors, spacing, and font sizes into `src/theme.ts`. Reference them in `StyleSheet.create()`.
 * **Navigation**: Use React Navigation for screen transitions. Define screen types with `NativeStackScreenProps` or `BottomTabScreenProps`.
 * **Accessibility**: Every interactive element must have `accessibilityLabel` and `accessibilityRole`. Images need `accessibilityLabel`. Use `accessibilityState` for toggles and checkboxes.

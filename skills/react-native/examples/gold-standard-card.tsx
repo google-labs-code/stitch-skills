@@ -16,12 +16,13 @@
 
 import React from 'react';
 import { View, Text, Image, Pressable, StyleSheet, Platform } from 'react-native';
+import { colors, shadows } from '../src/theme';
 
 /**
  * Gold Standard: ActivityCard
  * This file is the definitive reference for the agent.
  */
-interface ActivityCardProps {
+export interface ActivityCardProps {
   readonly id: string;
   readonly username: string;
   readonly action: 'MERGED' | 'COMMIT';
@@ -98,17 +99,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 16,
     minHeight: 56,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
+    ...shadows.card,
   },
   pressed: {
     opacity: 0.7,
@@ -143,20 +134,20 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   badgeMerged: {
-    backgroundColor: 'rgba(138, 43, 226, 0.3)',
+    backgroundColor: colors.badgeMergedBg,
   },
   badgeCommit: {
-    backgroundColor: 'rgba(25, 230, 111, 0.3)',
+    backgroundColor: colors.badgeCommitBg,
   },
   badgeText: {
     fontSize: 12,
     fontWeight: '600',
   },
   badgeTextMerged: {
-    color: '#D0A9F5',
+    color: colors.badgeMergedText,
   },
   badgeTextCommit: {
-    color: '#19E66F',
+    color: colors.badgeCommitText,
   },
   separator: {
     fontSize: 14,

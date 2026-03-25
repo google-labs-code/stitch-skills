@@ -19,6 +19,7 @@ if [ -z "$URL" ] || [ -z "$OUTPUT" ]; then
   echo "Usage: $0 <url> <output_path>"
   exit 1
 fi
+mkdir -p "$(dirname "$OUTPUT")"
 echo "Initiating high-reliability fetch for Stitch HTML..."
 curl -L -f -sS --connect-timeout 10 --compressed "$URL" -o "$OUTPUT"
 if [ $? -eq 0 ]; then
