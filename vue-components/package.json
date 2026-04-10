@@ -1,0 +1,16 @@
+{
+  "name": "vue-components",
+  "version": "1.0.0",
+  "description": "Design-to-code prompt to Vue 3 Composition API components for Stitch MCP",
+  "type": "module",
+  "scripts": {
+    "validate": "node scripts/validate.js",
+    "fetch": "bash scripts/fetch-stitch.sh"
+  },
+  "dependencies": {
+    "@vue/compiler-sfc": "^3.4.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
