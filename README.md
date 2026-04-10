@@ -51,6 +51,13 @@ Converts Stitch screens to React component systems with automated validation and
 npx skills add google-labs-code/stitch-skills --skill react:components --global
 ```
 
+### vue-components
+Converts Stitch screens to Vue component systems with automated validation and design token consistency.
+
+```bash
+npx skills add google-labs-code/stitch-skills --skill vue:components --global
+```
+
 ### remotion
 Generates walkthrough videos from Stitch projects using Remotion with smooth transitions, zooming, and text overlays to showcase app screens professionally.
 
