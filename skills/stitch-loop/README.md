@@ -1,6 +1,6 @@
-# Stitch Build Loop Skill
+# Stitch Full-Stack Delivery Loop Skill
 
-Teaches agents to iteratively build websites using Stitch with an autonomous baton-passing loop pattern.
+Turns Stitch into an end-to-end frontend delivery loop instead of a one-off design export.
 
 ## Install
 
@@ -10,45 +10,47 @@ npx skills add google-labs-code/stitch-skills --skill stitch-loop --global
 
 ## What It Does
 
-Enables continuous, autonomous website development through a "baton" system:
+This skill teaches an agent to run the full loop:
 
-1. Agent reads task from `next-prompt.md`
-2. Generates page via Stitch MCP tools
-3. Integrates into site structure
-4. Writes next task to continue the loop
+1. Read the current baton from `.stitch/next-prompt.md`
+2. Generate or refine the design in Stitch
+3. Pull HTML and screenshots into the repo
+4. Integrate the design into the real frontend codebase
+5. Run browser QA on the integrated app
+6. Review findings, fix issues, and retest
+7. Write the next baton so the loop continues
 
-## Prerequisites
+## What It Assumes
 
-- Stitch MCP Server access
-- A `DESIGN.md` file (generate with the `design-md` skill)
-- A `SITE.md` file for project context
+- Stitch MCP access is available, or will be set up first
+- The project keeps `.stitch/DESIGN.md`, `.stitch/SITE.md`, and `.stitch/metadata.json`
+- The generated design still needs real frontend integration work
+- Browser QA is part of the definition of done
 
-## Example Prompt
+## Key Resources
 
-```text
-Read my next-prompt.md and generate the page using Stitch, then prepare the next iteration.
-```
-
-## Skill Structure
-
-```
-stitch-loop/
-├── SKILL.md              — Core pattern instructions
-├── README.md             — This file
-├── resources/
-│   ├── baton-schema.md   — Baton file format spec
-│   └── site-template.md  — SITE.md/DESIGN.md templates
-└── examples/
-    ├── next-prompt.md    — Example baton
-    └── SITE.md           — Example site constitution
-```
+- `resources/fullstack-playbook.md` for the delivery phases and exit criteria
+- `resources/stitch-mcp-setup.md` for setting up Stitch MCP and agent access
+- `resources/openclaw-browser-qa.md` for OpenClaw and OpenCLI browser QA guidance
+- `resources/baton-schema.md` for baton format details
+- `resources/site-template.md` for bootstrapping project files
 
 ## Works With
 
-- **`design-md` skill**: Generate `DESIGN.md` from existing Stitch screens
-- **CI/CD**: GitHub Actions can trigger new iterations on push
-- **Agent chains**: Dispatch to other agents (Jules, etc.)
+- **`stitch-design`** for prompt enhancement and design-system creation
+- **`react:components`** for turning Stitch output into modular React code
+- **OpenClaw browser workflows** for browser-backed QA and fix verification
+- **CI/CD or human review** for approving each iteration before the next baton is consumed
+
+## Recommended Use
+
+Use this skill when you want Stitch to sit inside a repeatable product workflow:
+
+- product brief to screen generation
+- screen generation to app integration
+- app integration to browser QA
+- QA findings to fixes and retest
 
 ## Learn More
 
-See [SKILL.md](./SKILL.md) for complete instructions.
+See [SKILL.md](./SKILL.md) for the full operating instructions.

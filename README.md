@@ -17,21 +17,26 @@ npx skills add google-labs-code/stitch-skills --skill react:components --global
 ## Available Skills
 
 ### stitch-design
-Unified entry point for Stitch design work. Handles prompt enhancement (UI/UX keywords, atmosphere), design system synthesis (.stitch/DESIGN.md), and high-fidelity screen generation/editing via Stitch MCP.
+Unified entry point for Stitch design work. Handles prompt enhancement (UI/UX keywords, atmosphere), design system synthesis (`.stitch/DESIGN.md`), and high-fidelity screen generation and editing via Stitch MCP.
 
 ```bash
 npx skills add google-labs-code/stitch-skills --skill stitch-design --global
 ```
 
 ### stitch-loop
-Generates a complete multi-page website from a single prompt using Stitch, with automated file organization and validation.
+Guides an agent through a full Stitch design-to-code loop: prompt and baton intake, Stitch generation, repo integration, browser QA, review, fix, retest, and next-iteration handoff.
 
 ```bash
 npx skills add google-labs-code/stitch-skills --skill stitch-loop --global
 ```
 
+Key resources inside this skill:
+- `skills/stitch-loop/resources/fullstack-playbook.md`
+- `skills/stitch-loop/resources/stitch-mcp-setup.md`
+- `skills/stitch-loop/resources/openclaw-browser-qa.md`
+
 ### design-md
-Analyzes Stitch projects and generates comprehensive DESIGN.md files documenting design systems in natural, semantic language optimized for Stitch screen generation.
+Analyzes Stitch projects and generates comprehensive `DESIGN.md` files documenting design systems in natural, semantic language optimized for Stitch screen generation.
 
 ```bash
 npx skills add google-labs-code/stitch-skills --skill design-md --global
@@ -65,24 +70,36 @@ Expert guidance for integrating and building applications with shadcn/ui compone
 npx skills add google-labs-code/stitch-skills --skill shadcn-ui --global
 ```
 
+## Recommended Design-to-Code Flow
+
+A practical full-stack flow with this repo looks like this:
+
+1. Use `stitch-design` to refine prompts and stabilize the design system
+2. Use `design-md` if `.stitch/DESIGN.md` does not exist yet
+3. Use `stitch-loop` to run the delivery loop from design through integration and QA
+4. Use `react:components` when Stitch output needs to become modular React code
+5. Run real browser QA before calling the slice done
+
 ## Repository Structure
 
-Every directory within `skills/` or at the root level follows a standardized structure to ensure the AI agent has everything it needs to perform "few-shot" learning and automated quality checks.
+Every directory within `skills/` or at the root level follows a standardized structure to ensure the AI agent has everything it needs to perform few-shot learning and automated quality checks.
 
 ```text
 skills/[category]/
-├── SKILL.md           — The "Mission Control" for the agent
-├── scripts/           — Executable enforcers (Validation & Networking)
-├── resources/         — The knowledge base (Checklists & Style Guides)
-└── examples/          — The "Gold Standard" syntactically valid references
+├── SKILL.md           - The mission control for the agent
+├── scripts/           - Executable enforcers (validation and networking)
+├── resources/         - The knowledge base (checklists and style guides)
+└── examples/          - Gold-standard references
 ```
 
 ## Adding New Skills
+
 All new skills need to follow the file structure above to implement the Agent Skills open standard.
 
 ### Great candidates for new skills
-* **Validation**: Skills that convert Stitch HTML to other UI frameworks and validate the syntax.
-* **Decoupling Data**: Skills that convert static design content into external mock data files.
-* **Generate Designs**: Skills that generate new design screens in Stitch from a given set of data.
+
+- **Validation**: Skills that convert Stitch HTML to other UI frameworks and validate the syntax
+- **Decoupling Data**: Skills that convert static design content into external mock data files
+- **Generate Designs**: Skills that generate new design screens in Stitch from a given set of data
 
 This is not an officially supported Google product. This project is not eligible for the [Google Open Source Software Vulnerability Rewards Program](https://bughunters.google.com/open-source-security).

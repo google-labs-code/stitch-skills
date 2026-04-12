@@ -1,6 +1,6 @@
 ---
 name: stitch-loop
-description: Teaches agents to iteratively build websites using Stitch with an autonomous baton-passing loop pattern
+description: Guides agents through a full Stitch design-to-code delivery loop: set up Stitch MCP access, generate or edit designs, integrate them into a frontend codebase, run browser QA, review findings, fix issues, and continue with the next iteration.
 allowed-tools:
   - "stitch*:*"
   - "chrome*:*"
@@ -9,132 +9,180 @@ allowed-tools:
   - "Bash"
 ---
 
-# Stitch Build Loop
+# Stitch Full-Stack Delivery Loop
 
-You are an **autonomous frontend builder** participating in an iterative site-building loop. Your goal is to generate a page using Stitch, integrate it into the site, and prepare instructions for the next iteration.
+Use this skill when Stitch is part of a real frontend delivery workflow, not just a one-off mockup. The goal is to move from prompt to production-ready UI through a repeatable loop:
 
-## Overview
+1. Plan the slice
+2. Generate or edit the design in Stitch
+3. Pull the design artifacts into the repo
+4. Convert the design into maintainable app code
+5. Run browser QA
+6. Fix issues and retest
+7. Write the next baton for the next iteration
 
-The Build Loop pattern enables continuous, autonomous website development through a "baton" system. Each iteration:
-1. Reads the current task from a baton file (`.stitch/next-prompt.md`)
-2. Generates a page using Stitch MCP tools
-3. Integrates the page into the site structure
-4. Writes the next task to the baton file for the next iteration
+## Read these resources when needed
 
-## Prerequisites
+- `resources/fullstack-playbook.md` for the overall operating model and exit criteria
+- `resources/stitch-mcp-setup.md` when Stitch MCP access is not ready yet
+- `resources/openclaw-browser-qa.md` when running inside OpenClaw or when browser QA should be delegated to OpenClaw browser tooling
+- `resources/baton-schema.md` for the baton contract
+- `resources/site-template.md` when bootstrapping `.stitch/SITE.md` and `.stitch/DESIGN.md`
 
-**Required:**
-- Access to the Stitch MCP Server
-- A Stitch project (existing or will be created)
-- A `.stitch/DESIGN.md` file (generate one using the `design-md` skill if needed)
-- A `.stitch/SITE.md` file documenting the site vision and roadmap
+## Default posture
 
-**Optional:**
-- Chrome DevTools MCP Server — enables visual verification of generated pages
+- Treat Stitch as a design accelerator, not the owner of your frontend architecture
+- Keep routes, state, API contracts, validation, and tests in the application repo
+- Prefer `edit_screens` or targeted follow-up generations over full regeneration when refining an existing screen
+- Do not call a slice done until browser QA has passed
+- Keep the loop alive by updating `.stitch/next-prompt.md` before you finish
 
-## The Baton System
+## Minimum project context
 
-The `.stitch/next-prompt.md` file acts as a relay baton between iterations:
+Before starting, make sure these files exist or create them:
 
-```markdown
----
-page: about
----
-A page describing how jules.top tracking works.
-
-**DESIGN SYSTEM (REQUIRED):**
-[Copy from .stitch/DESIGN.md Section 6]
-
-**Page Structure:**
-1. Header with navigation
-2. Explanation of tracking methodology
-3. Footer with links
+```text
+.stitch/
+├── metadata.json
+├── DESIGN.md
+├── SITE.md
+└── next-prompt.md
 ```
 
-**Critical rules:**
-- The `page` field in YAML frontmatter determines the output filename
-- The prompt content must include the design system block from `.stitch/DESIGN.md`
-- You MUST update this file before completing your work to continue the loop
+Helpful adjacent files outside `.stitch/`:
 
-## Execution Protocol
+```text
+docs/
+├── api-contracts.md
+├── acceptance-criteria.md
+└── frontend-architecture.md
+```
 
-### Step 1: Read the Baton
+If these docs do not exist, infer the minimum viable structure from the repo and write down any assumptions you make.
+
+## Phase 0: Confirm Stitch access
+
+1. Run `list_tools` and look for a Stitch namespace such as `stitch:` or `mcp_stitch:`
+2. If Stitch tools are missing, read `resources/stitch-mcp-setup.md` and get the MCP path working first
+3. If the repo already stores `.stitch/metadata.json`, reuse the saved `projectId` and screen metadata instead of creating a new project
+
+## Phase 1: Read the baton and project context
 
 Parse `.stitch/next-prompt.md` to extract:
-- **Page name** from the `page` frontmatter field
-- **Prompt content** from the markdown body
+- the page or feature name from frontmatter
+- the prompt body
+- any design system block copied from `.stitch/DESIGN.md`
 
-### Step 2: Consult Context Files
+Then read:
+- `.stitch/SITE.md` for roadmap, sitemap, and project intent
+- `.stitch/DESIGN.md` for visual rules
+- the app's routing, component, and API structure in the repo
+- any acceptance criteria or API contracts that constrain the slice
 
-Before generating, read these files:
+## Phase 2: Generate or edit in Stitch
 
-| File | Purpose |
-|------|---------|
-| `.stitch/SITE.md` | Site vision, **Stitch Project ID**, existing pages (sitemap), roadmap |
-| `.stitch/DESIGN.md` | Required visual style for Stitch prompts |
+Use the Stitch MCP tools to generate or update the screen.
 
-**Important checks:**
-- Section 4 (Sitemap) — Do NOT recreate pages that already exist
-- Section 5 (Roadmap) — Pick tasks from here if backlog exists
-- Section 6 (Creative Freedom) — Ideas for new pages if roadmap is empty
+### Project and metadata flow
 
-### Step 3: Generate with Stitch
+1. Discover the Stitch namespace via `list_tools`
+2. If `.stitch/metadata.json` exists, reuse `projectId`
+3. Otherwise:
+   - call `[prefix]:create_project`
+   - call `[prefix]:get_project`
+   - save the returned project metadata to `.stitch/metadata.json`
+4. After each generation or edit, call `[prefix]:get_project` again and refresh the stored `screens` map with each screen's metadata
 
-Use the Stitch MCP tools to generate the page:
+### Screen generation flow
 
-1. **Discover namespace**: Run `list_tools` to find the Stitch MCP prefix
-2. **Get or create project**: 
-   - If `.stitch/metadata.json` exists, use the `projectId` from it
-   - Otherwise, call `[prefix]:create_project`, then call `[prefix]:get_project` to retrieve full project details, and save them to `.stitch/metadata.json` (see schema below)
-   - After generating each screen, call `[prefix]:get_project` again and update the `screens` map in `.stitch/metadata.json` with each screen's full metadata (id, sourceScreen, dimensions, canvas position)
-3. **Generate screen**: Call `[prefix]:generate_screen_from_text` with:
-   - `projectId`: The project ID
-   - `prompt`: The full prompt from the baton (including design system block)
-   - `deviceType`: `DESKTOP` (or as specified)
-4. **Retrieve assets**: Before downloading, check if `.stitch/designs/{page}.html` and `.stitch/designs/{page}.png` already exist:
-   - **If files exist**: Ask the user whether to refresh the designs from the Stitch project or reuse the existing local files. Only re-download if the user confirms.
-   - **If files do not exist**: Proceed with download:
-     - `htmlCode.downloadUrl` — Download and save as `.stitch/designs/{page}.html`
-      - `screenshot.downloadUrl` — Append `=w{width}` to the URL before downloading, where `{width}` is the `width` value from the screen metadata (Google CDN serves low-res thumbnails by default). Save as `.stitch/designs/{page}.png`
+Use one of these patterns:
+- `generate_screen_from_text` for new screens
+- `edit_screens` for targeted refinements to an existing screen
+- `generate_variants` when explicitly comparing directions
 
-### Step 4: Integrate into Site
+Always keep the prompt grounded in the current design system and product constraints.
 
-1. Move generated HTML from `.stitch/designs/{page}.html` to `site/public/{page}.html`
-2. Fix any asset paths to be relative to the public folder
-3. Update navigation:
-   - Find existing placeholder links (e.g., `href="#"`) and wire them to the new page
-   - Add the new page to the global navigation if appropriate
-4. Ensure consistent headers/footers across all pages
+### Artifact sync
 
-### Step 4.5: Visual Verification (Optional)
+Before downloading, check whether these files already exist:
 
-If the **Chrome DevTools MCP Server** is available, verify the generated page:
+```text
+.stitch/designs/{page}.html
+.stitch/designs/{page}.png
+```
 
-1. **Check availability**: Run `list_tools` to see if `chrome*` tools are present
-2. **Start dev server**: Use Bash to start a local server (e.g., `npx serve site/public`)
-3. **Navigate to page**: Call `[chrome_prefix]:navigate` to open `http://localhost:3000/{page}.html`
-4. **Capture screenshot**: Call `[chrome_prefix]:screenshot` to capture the rendered page
-5. **Visual comparison**: Compare against the Stitch screenshot (`.stitch/designs/{page}.png`) for fidelity
-6. **Stop server**: Terminate the dev server process
+- If they already exist, ask whether to refresh them from Stitch or reuse them
+- If they do not exist, download them and persist them locally
+- When downloading screenshots, append `=w{width}` to the screenshot URL so the local image matches the actual screen width instead of a thumbnail
 
-> **Note:** This step is optional. If Chrome DevTools MCP is not installed, skip to Step 5.
+## Phase 3: Productionize the design in code
 
-### Step 5: Update Site Documentation
+Do not stop at copied HTML.
 
-Modify `.stitch/SITE.md`:
-- Add the new page to Section 4 (Sitemap) with `[x]`
-- Remove any idea you consumed from Section 6 (Creative Freedom)
-- Update Section 5 (Roadmap) if you completed a backlog item
+### Required productionization work
 
-### Step 6: Prepare the Next Baton (Critical)
+- map the screen into the app's actual routes or pages
+- extract reusable components instead of shipping a single giant generated file
+- move static content into data files when appropriate
+- connect forms, state, and API calls to the app's real architecture
+- add loading, empty, error, and permission states
+- preserve or translate the design tokens into the target design system
+- keep navigation, header, footer, and layout shells consistent with the rest of the app
 
-**You MUST update `.stitch/next-prompt.md` before completing.** This keeps the loop alive.
+### Handoff guidance
 
-1. **Decide the next page**: 
-   - Check `.stitch/SITE.md` Section 5 (Roadmap) for pending items
-   - If empty, pick from Section 6 (Creative Freedom)
-   - Or invent something new that fits the site vision
-2. **Write the baton** with proper YAML frontmatter:
+- Use `stitch-design` when the prompt or design system still needs work
+- Use `react:components` when the screen needs to become modular React code
+- If the project is Next.js, Astro, Vite, or another existing stack, integrate into that stack instead of creating parallel demo output
+
+## Phase 4: Browser QA is mandatory
+
+After integration, run the feature in a real browser.
+
+### Preferred browser QA path
+
+If you are running inside OpenClaw, read `resources/openclaw-browser-qa.md` and prefer the OpenClaw path:
+- use `remote-opencli` when the browser-backed run should happen through the remote OpenCLI stack
+- use `agent-browser` when deterministic click, snapshot, and interaction steps are needed
+
+### Generic fallback
+
+If OpenClaw browser tooling is not available, use Chrome DevTools MCP or the best available browser automation surface.
+
+### Minimum QA checklist
+
+- open the actual route and verify it renders
+- compare the integrated page against the Stitch screenshot for layout fidelity
+- test navigation links and route transitions
+- test forms and input validation
+- verify responsive behavior at the key widths the app supports
+- inspect obvious empty, error, and loading states
+- check browser console errors and failed network requests
+- capture issues in a short QA note before fixing them
+
+## Phase 5: Review, fix, and retest
+
+Treat QA as a loop, not a single pass.
+
+1. Convert findings into concrete fixes
+2. Patch the frontend code, not the symptom screenshot
+3. Re-run browser QA after each meaningful fix set
+4. Repeat until the slice passes visual, behavioral, and integration checks
+
+If the issue is really a design issue rather than an implementation issue, loop back to Stitch and edit the source screen, then pull the updated design back into code.
+
+## Phase 6: Update the project record
+
+Update the repo state before you finish:
+
+- refresh `.stitch/metadata.json`
+- update `.stitch/SITE.md` sitemap and roadmap
+- note any important implementation constraints or API assumptions in the repo docs
+- update `.stitch/next-prompt.md` with the next baton
+
+## Baton rules
+
+The baton file keeps the loop alive.
 
 ```markdown
 ---
@@ -143,121 +191,35 @@ page: achievements
 A competitive achievements page showing developer badges and milestones.
 
 **DESIGN SYSTEM (REQUIRED):**
-[Copy the entire design system block from .stitch/DESIGN.md]
+[Copy the relevant block from .stitch/DESIGN.md]
 
 **Page Structure:**
 1. Header with title and navigation
-2. Badge grid showing unlocked/locked states
+2. Badge grid showing locked and unlocked states
 3. Progress bars for milestone tracking
 ```
 
-## File Structure Reference
+Critical rules:
+- `page` controls the output filename
+- the body must include the design system block
+- the next baton must describe a page or slice that is not already complete in the sitemap
 
-```
-project/
-├── .stitch/
-│   ├── metadata.json   # Stitch project & screen IDs (persist this!)
-│   ├── DESIGN.md       # Visual design system (from design-md skill)
-│   ├── SITE.md         # Site vision, sitemap, roadmap
-│   ├── next-prompt.md  # The baton — current task
-│   └── designs/        # Staging area for Stitch output
-│       ├── {page}.html
-│       └── {page}.png
-└── site/public/        # Production pages
-    ├── index.html
-    └── {page}.html
-```
+## Definition of done
 
-### `.stitch/metadata.json` Schema
+A loop iteration is only done when all of these are true:
 
-This file persists all Stitch identifiers so future iterations can reference them for edits or variants. Populate it by calling `[prefix]:get_project` after creating a project or generating screens.
+- Stitch design state is saved and locally synced
+- the feature is integrated into the real app structure
+- navigation and data wiring are in place
+- browser QA has been run on the integrated result
+- discovered issues were fixed or clearly documented
+- `.stitch/SITE.md`, `.stitch/metadata.json`, and `.stitch/next-prompt.md` are up to date
 
-```json
-{
-  "name": "projects/6139132077804554844",
-  "projectId": "6139132077804554844",
-  "title": "My App",
-  "visibility": "PRIVATE",
-  "createTime": "2026-03-04T23:11:25.514932Z",
-  "updateTime": "2026-03-04T23:34:40.400007Z",
-  "projectType": "PROJECT_DESIGN",
-  "origin": "STITCH",
-  "deviceType": "MOBILE",
-  "designTheme": {
-    "colorMode": "DARK",
-    "font": "INTER",
-    "roundness": "ROUND_EIGHT",
-    "customColor": "#40baf7",
-    "saturation": 3
-  },
-  "screens": {
-    "index": {
-      "id": "d7237c7d78f44befa4f60afb17c818c1",
-      "sourceScreen": "projects/6139132077804554844/screens/d7237c7d78f44befa4f60afb17c818c1",
-      "x": 0,
-      "y": 0,
-      "width": 390,
-      "height": 1249
-    },
-    "about": {
-      "id": "bf6a3fe5c75348e58cf21fc7a9ddeafb",
-      "sourceScreen": "projects/6139132077804554844/screens/bf6a3fe5c75348e58cf21fc7a9ddeafb",
-      "x": 549,
-      "y": 0,
-      "width": 390,
-      "height": 1159
-    }
-  },
-  "metadata": {
-    "userRole": "OWNER"
-  }
-}
-```
+## Common failure modes
 
-| Field | Description |
-|-------|-------------|
-| `name` | Full resource name (`projects/{id}`) |
-| `projectId` | Stitch project ID (from `create_project` or `get_project`) |
-| `title` | Human-readable project title |
-| `designTheme` | Design system tokens: color mode, font, roundness, custom color, saturation |
-| `deviceType` | Target device: `MOBILE`, `DESKTOP`, `TABLET` |
-| `screens` | Map of page name → screen object. Each screen includes `id`, `sourceScreen` (resource path for MCP calls), canvas position (`x`, `y`), and dimensions (`width`, `height`) |
-| `metadata.userRole` | User's role on the project (`OWNER`, `EDITOR`, `VIEWER`) |
-
-## Orchestration Options
-
-The loop can be driven by different orchestration layers:
-
-| Method | How it works |
-|--------|--------------|
-| **CI/CD** | GitHub Actions triggers on `.stitch/next-prompt.md` changes |
-| **Human-in-loop** | Developer reviews each iteration before continuing |
-| **Agent chains** | One agent dispatches to another (e.g., Jules API) |
-| **Manual** | Developer runs the agent repeatedly with the same repo |
-
-The skill is orchestration-agnostic — focus on the pattern, not the trigger mechanism.
-
-## Design System Integration
-
-This skill works best with the `design-md` skill:
-
-1. **First time setup**: Generate `.stitch/DESIGN.md` using the `design-md` skill from an existing Stitch screen
-2. **Every iteration**: Copy Section 6 ("Design System Notes for Stitch Generation") into your baton prompt
-3. **Consistency**: All generated pages will share the same visual language
-
-## Common Pitfalls
-
-- ❌ Forgetting to update `.stitch/next-prompt.md` (breaks the loop)
-- ❌ Recreating a page that already exists in the sitemap
-- ❌ Not including the design system block from `.stitch/DESIGN.md` in the prompt
-- ❌ Leaving placeholder links (`href="#"`) instead of wiring real navigation
-- ❌ Forgetting to persist `.stitch/metadata.json` after creating a new project
-
-## Troubleshooting
-
-| Issue | Solution |
-|-------|----------|
-| Stitch generation fails | Check that the prompt includes the design system block |
-| Inconsistent styles | Ensure `.stitch/DESIGN.md` is up-to-date and copied correctly |
-| Loop stalls | Verify `.stitch/next-prompt.md` was updated with valid frontmatter |
-| Navigation broken | Check all internal links use correct relative paths |
+- stopping at exported HTML and calling it implementation
+- regenerating whole screens when a small edit would do
+- ignoring loading, empty, or error states
+- skipping browser QA and relying only on code inspection
+- forgetting to refresh `.stitch/metadata.json`
+- forgetting to update the baton and breaking the loop
