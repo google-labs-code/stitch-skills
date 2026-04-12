@@ -25,8 +25,9 @@ Use these templates when setting up a new project for the build loop.
     * *Tertiary:* [Additional flavor]
 
 ## 3. Architecture & File Structure
-* **Root:** `site/public/`
-* **Asset Flow:** Stitch generates to `queue/` → Validate → Move to `site/public/`
+* **App Root:** [Your real frontend app root, such as `app/`, `src/`, or `site/`]
+* **Stitch Staging:** Store downloaded Stitch artifacts in `.stitch/designs/`
+* **Integration Flow:** Stitch generates design artifacts → review and validate them → integrate them into the app's real routes, components, and data layer
 * **Navigation Strategy:** [How nav works]
 
 ## 4. Live Sitemap (Current State)
@@ -60,7 +61,7 @@ Use these templates when setting up a new project for the build loop.
 
 ## 7. Rules of Engagement
 1. Do not recreate pages in Section 4
-2. Always update `next-prompt.md` before completing
+2. Always update `.stitch/next-prompt.md` before completing
 3. Consume ideas from Section 6 when you use them
 ```
 

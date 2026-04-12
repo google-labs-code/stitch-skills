@@ -6,9 +6,11 @@ Use this guide when the Stitch loop runs inside OpenClaw and browser QA should b
 
 Use OpenClaw browser workflows instead of treating browser QA as optional.
 
+`remote-opencli` and `agent-browser` are external OpenClaw skills, not files bundled in this repository.
+
 ### Default split of responsibilities
 
-- Use the `remote-opencli` skill when the browser-backed work should run through the remote OpenCLI stack on the Mac mini
+- Use the `remote-opencli` skill when the browser-backed work should run through a remote OpenCLI stack
 - Use the `agent-browser` skill when you need deterministic interaction with a live browser session, including open, snapshot, and act steps
 
 This split works well because `remote-opencli` is good for remote browser-backed orchestration and `agent-browser` is good for precise page interaction.
@@ -23,9 +25,10 @@ This split works well because `remote-opencli` is good for remote browser-backed
 6. Compare the integrated result against the Stitch screenshot
 7. Record issues, fix them in code, and rerun the same browser checks
 
-## `agent-browser` defaults
+## `agent-browser` example defaults
 
-When using the OpenClaw browser tool path, prefer these defaults:
+When using the OpenClaw browser tool path, prefer stable node-backed browser settings for your environment.
+For example, one OpenClaw setup might use:
 - `target: "node"`
 - `node: "Mac-Mini-Node"`
 - `profile: "openclaw"`
@@ -39,16 +42,17 @@ Typical sequence:
 
 If the browser session drops, restart it with the same profile and continue.
 
-## `remote-opencli` defaults
+## `remote-opencli` example defaults
 
-Use the verified Mac mini route unless the user asks otherwise:
+Use the remote OpenCLI host and PATH for your own environment.
+For example, one setup might use:
 - SSH target: `xlmini@xlmini`
 - prepend `PATH="/opt/homebrew/bin:$HOME/.bun/bin:$PATH"`
 - verify with `opencli --version` and `opencli doctor`
 
 Use this route when:
 - the QA job is remote or long-running
-- the page needs a real logged-in browser context on the Mac
+- the page needs a real logged-in browser context on the remote machine
 - the work should be checked later instead of busy polling
 
 ## What to test in browser QA

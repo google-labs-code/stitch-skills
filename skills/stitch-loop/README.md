@@ -23,7 +23,7 @@ This skill teaches an agent to run the full loop:
 ## What It Assumes
 
 - Stitch MCP access is available, or will be set up first
-- The project keeps `.stitch/DESIGN.md`, `.stitch/SITE.md`, and `.stitch/metadata.json`
+- The project keeps `.stitch/DESIGN.md`, `.stitch/SITE.md`, `.stitch/metadata.json`, and `.stitch/next-prompt.md`
 - The generated design still needs real frontend integration work
 - Browser QA is part of the definition of done
 

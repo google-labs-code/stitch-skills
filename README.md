@@ -82,14 +82,14 @@ A practical full-stack flow with this repo looks like this:
 
 ## Repository Structure
 
-Every directory within `skills/` or at the root level follows a standardized structure to ensure the AI agent has everything it needs to perform few-shot learning and automated quality checks.
+Skills in this repository commonly follow a standardized structure so the AI agent has what it needs for few-shot learning and automated quality checks. Not every skill uses every optional subdirectory.
 
 ```text
 skills/[category]/
 ├── SKILL.md           - The mission control for the agent
-├── scripts/           - Executable enforcers (validation and networking)
-├── resources/         - The knowledge base (checklists and style guides)
-└── examples/          - Gold-standard references
+├── scripts/           - Optional executable helpers for validation and networking
+├── resources/         - Optional knowledge base files such as checklists and style guides
+└── examples/          - Optional gold-standard references
 ```
 
 ## Adding New Skills
