@@ -1,6 +1,6 @@
 # Stitch Design Skill
 
-Teaches agents to generate high-fidelity, consistent UI designs and maintain project-level design systems using Stitch.
+Teaches agents to generate high-fidelity, consistent designs and maintain project-level design systems using Stitch.
 
 ## Install
 
@@ -10,40 +10,41 @@ npx skills add google-labs-code/stitch-skills --skill stitch-design --global
 
 ## What It Does
 
-Enables professional-grade UI/UX design workflows through Stitch MCP:
+Enables professional-grade design workflows through Stitch MCP:
 
-1. **Prompt Enhancement**: Transforms rough intent into structured, high-fidelity prompts with professional terminology and design system context.
-2. **Design System Synthesis**: Analyzes existing Stitch projects to create and maintain a `.stitch/DESIGN.md` "source of truth".
-3. **Iterative Generation**: Selects the best generation or editing workflow (`edit_screens`, `generate_variants`) based on user intent.
-4. **Asset Management**: Synchronizes remote designs by downloading HTML and screenshots to the project's `.stitch/designs` directory.
+1. **Prompt Enhancement**: Transforms rough intent into structured, high-fidelity prompts with professional design terminology and system context.
+2. **Design System Synthesis**: Analyzes existing Stitch projects to create and maintain a `.stitch/DESIGN.md` source of truth.
+3. **Iterative Generation**: Selects the best generation or editing workflow based on user intent.
+4. **Asset Management**: Synchronizes remote designs by downloading HTML and screenshots to `.stitch/designs`.
+5. **Handoff Readiness**: Produces output that can move cleanly into `stitch-loop` or `react:components`.
+6. **Content-System Support**: Works for app pages, web flows, and reusable content layouts such as social carousel posts.
 
 ## Prerequisites
 
 - Stitch MCP Server access
-- A project `projectId` (can be discovered via `list_projects`)
+- A project `projectId` if you are continuing an existing project
 
-## Example Prompt
+## Example Prompts
 
 ```text
 Design a premium landing page for a mountain resort with a focus on serene luxury and glassmorphism.
 ```
 
-## Skill Structure
+```text
+Design a 6-slide XiaohongShu-style carousel explaining why long-term investing beats chasing hot themes.
+```
 
-```
-stitch-design/
-├── SKILL.md           — Core instructions & Prompt Pipeline
-├── README.md          — This file
-├── workflows/         — Specialized pipelines (Text-to-UI, Edit, MD)
-├── references/        — UI/UX keywords & Technical Mappings
-└── examples/          — Gold-standard references (Solace Mindfulness)
-```
+## Example Files
+
+- `examples/enhanced-prompt.md`
+- `examples/xiaohongshu-carousel-prompt.md`
+- `examples/fullstack-handoff.md`
 
 ## Works With
 
-- **`react:components` skill**: Hand-off generated designs for frontend implementation.
-- **`stitch-loop` skill**: Provides the `DESIGN.md` context for autonomous building loops.
-- **Multi-agent workflows**: Refines prompts before passing design tasks to specialized agents.
+- **`react:components`** for frontend implementation handoff
+- **`stitch-loop`** for design to code to QA iteration loops
+- **multi-agent workflows** that split design, implementation, QA, and fix passes
 
 ## Learn More
 

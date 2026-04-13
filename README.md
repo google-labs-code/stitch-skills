@@ -17,7 +17,7 @@ npx skills add google-labs-code/stitch-skills --skill react:components --global
 ## Available Skills
 
 ### stitch-design
-Unified entry point for Stitch design work. Handles prompt enhancement (UI/UX keywords, atmosphere), design system synthesis (`.stitch/DESIGN.md`), and high-fidelity screen generation and editing via Stitch MCP.
+Unified entry point for Stitch design work. Handles prompt enhancement, design system synthesis (`.stitch/DESIGN.md`), and high-fidelity generation or editing for web pages, app flows, and reusable content layouts such as social carousel posts.
 
 ```bash
 npx skills add google-labs-code/stitch-skills --skill stitch-design --global
