@@ -37,6 +37,7 @@ If the user is designing a content series rather than an app page, think in term
 - brand consistency across all slides
 
 For a concrete content-series example, see [Xiaohongshu carousel example](examples/xiaohongshu-carousel-prompt.md).
+When the request is a research-driven content set or social post series, also read [Content system playbook](references/content-system-playbook.md).
 
 ## Workflows
 
@@ -56,6 +57,8 @@ Before calling any Stitch generation or editing tool, enhance the user's prompt.
 - **Project scope**: Maintain the current `projectId`. Use `list_projects` if unknown.
 - **Design system**: Check for `.stitch/DESIGN.md`. If it exists, incorporate its tokens. If not, suggest the `generate-design-md` workflow.
 - **Delivery target**: Identify whether the design is for a real product surface, a prototype, or a content asset set.
+- **Research state**: If the design depends on facts, examples, screenshots, product claims, or market context, gather the source material first. If key inputs are missing, ask targeted questions or request approved copy before designing.
+- **Human collaboration**: For publishable content assets, treat human approval as part of the workflow rather than assuming the first generated set is final.
 
 ### 2. Refine terminology
 Consult [Design Mappings](references/design-mappings.md) to replace vague terms.
@@ -96,6 +99,11 @@ If the design will later be implemented or QA'd:
 - preserve useful screen naming or slugging
 - mention whether the next step should be `stitch-loop` or `react:components`
 
+If the output is a content set rather than app UI:
+- preserve slide order and per-slide purpose
+- note any assumptions or unverified claims that still need human review
+- package a short slide-by-slide summary that another agent or reviewer can use without reopening the whole design context
+
 ---
 
 ## References
@@ -103,6 +111,7 @@ If the design will later be implemented or QA'd:
 - [Tool Schemas](references/tool-schemas.md) for how to call Stitch MCP tools
 - [Design Mappings](references/design-mappings.md) for UI or editorial language upgrades
 - [Prompting Keywords](references/prompt-keywords.md) for technical terms Stitch understands well
+- [Content system playbook](references/content-system-playbook.md) for discovery, research, human collaboration, and multi-slide social content workflows
 
 ---
 

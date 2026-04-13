@@ -18,6 +18,7 @@ Enables professional-grade design workflows through Stitch MCP:
 4. **Asset Management**: Synchronizes remote designs by downloading HTML and screenshots to `.stitch/designs`.
 5. **Handoff Readiness**: Produces output that can move cleanly into `stitch-loop` or `react:components`.
 6. **Content-System Support**: Works for app pages, web flows, and reusable content layouts such as social carousel posts.
+7. **Discovery-Friendly Workflow**: Encourages research, source gathering, and human collaboration before finalizing publishable content sets.
 
 ## Prerequisites
 
@@ -38,7 +39,12 @@ Design a 6-slide XiaohongShu-style carousel explaining why long-term investing b
 
 - `examples/enhanced-prompt.md`
 - `examples/xiaohongshu-carousel-prompt.md`
+- `examples/xiaohongshu-content-brief.md`
 - `examples/fullstack-handoff.md`
+
+## Key Reference
+
+- `references/content-system-playbook.md` for social-post discovery, research gathering, human approval points, and slide architecture guidance
 
 ## Works With
 

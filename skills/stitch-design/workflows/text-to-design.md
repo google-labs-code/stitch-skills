@@ -14,6 +14,7 @@ Before calling the Stitch MCP tool, apply the [Prompt Enhancement Pipeline](../S
 - Incorporate any existing design system from `.stitch/DESIGN.md`.
 - Use specific [Design Mappings](../references/design-mappings.md) and [Prompting Keywords](../references/prompt-keywords.md).
 - If the design is a multi-screen set, explicitly define the number of frames or screens and the role of each one.
+- If the request is a social or research-driven content set, read [content-system-playbook](../references/content-system-playbook.md) first and gather the needed source material or human inputs before generating.
 
 ### 2. Identify the project
 Use `list_projects` to find the correct `projectId` if it is not already known.
@@ -44,6 +45,7 @@ After generation, download the HTML and screenshot URLs from `outputComponents` 
 - If the result is close but not right, use the [edit-design](edit-design.md) workflow.
 - Do not regenerate from scratch unless the fundamental structure is wrong.
 - If the result is part of a real delivery pipeline, hand off to `stitch-loop` or `react:components` after the design direction is accepted.
+- If the result is a publishable content asset, do one human-review pass on the outline or final set before treating it as final.
 
 ## Tips
 - **Be structural**: Break the output into sections, screens, or slides.
