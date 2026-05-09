@@ -1,6 +1,6 @@
 ---
 name: stitch-loop
-description: Teaches agents to iteratively build websites using Stitch with an autonomous baton-passing loop pattern
+description: Teaches agents to iteratively build websites using Stitch with an autonomous baton-passing loop pattern. Use when the user wants to "build a multi-page site with Stitch", "set up a Stitch generation loop", "iterate on a `.stitch/next-prompt.md` baton file", or "scaffold a continuous Stitch + site-build workflow". Do NOT use for one-off single-page Stitch generations, non-Stitch site builders, or generic project scaffolding unrelated to Stitch.
 allowed-tools:
   - "stitch*:*"
   - "chrome*:*"
@@ -253,11 +253,55 @@ This skill works best with the `design-md` skill:
 - ❌ Leaving placeholder links (`href="#"`) instead of wiring real navigation
 - ❌ Forgetting to persist `.stitch/metadata.json` after creating a new project
 
-## Troubleshooting
+## Examples
 
-| Issue | Solution |
-|-------|----------|
-| Stitch generation fails | Check that the prompt includes the design system block |
-| Inconsistent styles | Ensure `.stitch/DESIGN.md` is up-to-date and copied correctly |
-| Loop stalls | Verify `.stitch/next-prompt.md` was updated with valid frontmatter |
-| Navigation broken | Check all internal links use correct relative paths |
+### Example 1: First iteration on a fresh project
+
+The user has run `design-md` and has a `.stitch/DESIGN.md` and `.stitch/SITE.md` ready. The baton (`.stitch/next-prompt.md`) requests an `about` page:
+
+1. Read the baton; extract `page: about` and the prompt body
+2. Read `.stitch/SITE.md`: confirm `about` is not already in the sitemap
+3. Read `.stitch/DESIGN.md` Section 6 and confirm it is in the baton prompt
+4. Call `[prefix]:create_project` (no metadata.json yet), then `get_project`, save to `.stitch/metadata.json`
+5. Call `generate_screen_from_text` with the baton prompt
+6. Download HTML and screenshot (with the `=w{width}` suffix on the screenshot URL)
+7. Move HTML to `site/public/about.html`, fix asset paths
+8. Update `.stitch/SITE.md` sitemap with `[x] about`
+9. Pick `pricing` from the roadmap and write the next baton
+
+### Example 2: Subsequent iteration with existing local files
+
+The user re-runs the loop and `.stitch/designs/about.html` already exists from a prior run:
+
+1. Read the baton; the page is still `about`
+2. At the asset download step, detect both files exist
+3. Ask the user "Refresh the design from Stitch, or reuse the local files?"
+4. On "reuse", skip download and continue at the integrate-into-site step
+5. Update the sitemap and write the next baton as usual
+
+### Example 3: Visual verification with Chrome DevTools MCP
+
+The Chrome DevTools MCP is connected. After integrating the page:
+
+1. Run `list_tools` and find tools prefixed `chrome:`
+2. Start a local server with `npx serve site/public` in the background
+3. Call `[chrome_prefix]:navigate` to `http://localhost:3000/about.html`
+4. Capture a screenshot, compare against `.stitch/designs/about.png`
+5. If layout drifts, adjust the integration (asset paths, missing CSS) and re-verify
+6. Stop the dev server and continue to the documentation update
+
+## Error Handling
+
+| Issue | Likely cause | What to do |
+|-------|--------------|-----------|
+| Stitch generation fails | Prompt is missing the design system block | Re-read the baton; confirm Section 6 of `.stitch/DESIGN.md` is included verbatim |
+| Inconsistent styles across pages | `.stitch/DESIGN.md` outdated or copied incompletely | Regenerate DESIGN.md with the `design-md` skill, then update the baton template |
+| Loop stalls (no next baton) | Prior iteration finished without writing `.stitch/next-prompt.md` | Read `.stitch/SITE.md` Sections 5 and 6; pick the next page and write a baton manually |
+| Navigation broken in the integrated page | Internal links still use `href="#"` placeholders or absolute paths to `.stitch/designs/` | Replace placeholders with the correct relative path inside `site/public/` |
+| `.stitch/metadata.json` missing screen entries | `get_project` was not re-called after each `generate_screen_from_text` | Call `get_project` again and merge each screen's `id`, `sourceScreen`, `width`, `height`, `x`, `y` into the `screens` map |
+| Screenshot shows the wrong page | The Stitch CDN cached a previous version, or the `screenshotUrl` field was stale | Re-call `get_screen` to refresh URLs before downloading |
+| `chrome:navigate` fails in step 4.5 | Local server did not start, or wrong port | Confirm the dev server PID and port; if Chrome DevTools MCP is unavailable at all, skip step 4.5 |
+| YAML frontmatter rejected | Stray quotes or missing `---` delimiters in `next-prompt.md` | Rewrite the frontmatter with strict YAML; only `page:` is required, no quotes around the value |
+| Page recreated despite existing in sitemap | Sitemap not consulted before generation | Always read Section 4 of `.stitch/SITE.md` before calling `generate_screen_from_text` |
+
+If `generate_screen_from_text` returns success but the resulting screen is empty or off-brand, do NOT silently regenerate. Surface the failure to the user with the request payload and the returned screen ID, so they can inspect the project in Stitch directly.
