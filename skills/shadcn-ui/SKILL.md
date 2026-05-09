@@ -269,7 +269,7 @@ import {
 } from "@/components/ui/table"
 ```
 
-## Troubleshooting
+## Error Handling
 
 ### Import Errors
 - Check `components.json` for correct alias configuration
@@ -299,6 +299,19 @@ import {
 - Some components require specific Radix UI versions
 - Check documentation for breaking changes between versions
 
+### MCP Tool Errors
+- `list_components` returns nothing: confirm the shadcn MCP server is connected for this session before retrying
+- `get_component` returns 404: the component name may be from a custom registry; check `components.json` and use `get_project_registries` to list available registries
+- CLI command hangs on `npx shadcn@latest add`: clear the npx cache (`npm cache clean --force`) and retry once before falling back to manual integration
+
+### CLI vs Manual Integration
+- If the CLI fails, retrieve the source code with `get_component`, place the file under `components/ui/[name].tsx`, and install peer dependencies by hand
+- Check `get_component_metadata` for the dependency list before manual installs to avoid runtime errors
+
+### When in doubt
+- Read the user's `components.json` first; mismatched style (`default` vs `new-york`), `baseColor`, or RSC settings cause silent breakage
+- Confirm the active framework (Next.js vs Vite vs Remix) before applying any framework-specific guidance
+
 ## Validation and Quality
 
 Before committing components:
@@ -318,9 +331,37 @@ Refer to the following resource files for detailed guidance:
 
 ## Examples
 
-See the `examples/` directory for:
-- Complete component implementations
-- Form patterns with validation
-- Dashboard layouts
-- Authentication flows
-- Data table implementations
+The `examples/` directory ships ready-to-read references:
+- `auth-layout.tsx` — Login/signup page composition with `Card`, `Form`, and `Input` primitives
+- `data-table.tsx` — Sortable, paginated data table built on `Table` and `DropdownMenu`
+- `form-pattern.tsx` — Form with `react-hook-form` validation and inline error display
+
+### Example 1: Add a confirmation dialog to a destructive action
+
+The user wants a "Delete account" button to confirm before submitting:
+
+1. `npx shadcn@latest add alert-dialog button`
+2. Wrap the existing button in an `AlertDialog` and `AlertDialogTrigger`
+3. Use `AlertDialogContent`, `AlertDialogHeader`, `AlertDialogFooter` for structure
+4. Wire the destructive action to `AlertDialogAction`'s `onClick` and use `variant="destructive"` on the button
+5. Confirm keyboard navigation: `Esc` closes, `Enter` submits
+
+### Example 2: Replace a hand-rolled form with shadcn primitives
+
+The user has a contact form built with raw HTML inputs:
+
+1. Read `examples/form-pattern.tsx` to see the `useForm` + `FormField` integration
+2. `npx shadcn@latest add form input label button textarea`
+3. Migrate each input into a `<FormField>` with `<FormItem>`, `<FormLabel>`, `<FormControl>`, `<FormMessage>`
+4. Define a Zod schema for validation; pass the resolver to `useForm`
+5. Verify error states render inline and the submit button disables during async submission
+
+### Example 3: Add dark mode without breaking existing styles
+
+The user has a working light-mode app and wants dark mode:
+
+1. Confirm `cssVariables: true` in `components.json`
+2. Add the `.dark` block from the customisation section to `app/globals.css`
+3. Install a theme toggle: `npx shadcn@latest add dropdown-menu` and use `next-themes` or a hand-rolled provider
+4. Audit each shadcn component for light-mode-only colours; replace any raw hex with semantic tokens (`bg-primary`, `text-foreground`)
+5. Test contrast in both modes against the WCAG AA threshold
