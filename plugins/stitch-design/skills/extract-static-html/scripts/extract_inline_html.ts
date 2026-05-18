@@ -21,7 +21,7 @@
  *   --extra-css       Path to index.html to extract <style>/<link> from
  *   --html-class      Class(es) for <html> element (e.g., "dark")
  *   --outdir          Output directory (default: .stitch)
- *   --exclude-pattern Regex pattern to exclude from body HTML
+ *   --exclude-pattern Literal string to exclude from body HTML
  *   --concurrency     Max concurrent image fetches (default: 6)
  *   --timeout         HTTP request timeout in ms (default: 15000)
  *   --json            Output machine-readable JSON stats
@@ -78,20 +78,10 @@ interface AllStats {
 // ---------------------------------------------------------------------------
 // Argument parsing
 // ---------------------------------------------------------------------------
-// Validate a regex pattern string for safety before compilation.
-// Rejects patterns with constructs known to cause catastrophic backtracking.
-function validateRegexPattern(pattern: string): RegExp {
-  // Reject nested quantifiers that can cause catastrophic backtracking (ReDoS),
-  // e.g. (a+)+, (a*)+, (a+)*, (a{2,})+, etc.
-  const nestedQuantifier = /([+*}])\s*\)\s*[+*?{]/;
-  if (nestedQuantifier.test(pattern)) {
-    throw new Error(
-      `Potentially unsafe regex pattern (nested quantifiers detected): ${pattern}`
-    );
-  }
-
-  // Test that the pattern compiles — throws SyntaxError if invalid
-  return new RegExp(pattern, 'gs');
+// Escape all regex metacharacters in user input so it is treated as a literal
+// string match when used in new RegExp(). Prevents regex injection (ReDoS).
+function escapeRegExp(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function parseArgs(): Opts {
@@ -123,12 +113,8 @@ function parseArgs(): Opts {
       case '--outdir': opts.outdir = args[++i]; break;
       case '--exclude-pattern': {
         const rawPattern = args[++i];
-        try {
-          opts.excludePattern = validateRegexPattern(rawPattern);
-        } catch (e: unknown) {
-          console.error(`Error: Invalid --exclude-pattern: ${(e as Error).message}`);
-          process.exit(1);
-        }
+        // Escape metacharacters so user input is treated as a literal string
+        opts.excludePattern = new RegExp(escapeRegExp(rawPattern), 'gs');
         break;
       }
       case '--concurrency': opts.concurrency = parseInt(args[++i], 10); break;
@@ -147,7 +133,7 @@ Options:
   --extra-css        Path to index.html for <style>/<link> extraction
   --html-class       Class for <html> element (e.g., "dark")
   --outdir           Output directory (default: .stitch)
-  --exclude-pattern  Regex to exclude from body
+  --exclude-pattern  Literal string to exclude from body
   --concurrency      Max concurrent image fetches (default: 6)
   --timeout          HTTP request timeout in ms (default: 15000)
   --json             Output machine-readable JSON stats
