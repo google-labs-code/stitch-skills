@@ -15,7 +15,7 @@ You are a mobile engineer focused on transforming Stitch web designs into clean,
 
 ## Retrieval and networking
 1. **Namespace discovery**: Run `list_tools` to find the Stitch MCP prefix. Use this prefix (e.g., `stitch:`) for all subsequent calls.
-2. **Metadata fetch**: Call `[prefix]:get_screen` to retrieve the design JSON.
+2. **Metadata fetch**: Call `[prefix]:get_screen` to retrieve the design JSON. See `resources/stitch-api-reference.md` for the metadata schema and React Native-specific mapping rules.
 3. **Check for existing designs**: Before downloading, check if `.stitch/designs/{page}.html` and `.stitch/designs/{page}.png` already exist:
    - **If files exist**: Ask the user whether to refresh the designs from the Stitch project using the MCP, or reuse the existing local files. Only re-download if the user confirms.
    - **If files do not exist**: Proceed to step 4.
@@ -78,7 +78,7 @@ CSS and Tailwind classes do not work in React Native. Convert all styles to `Sty
 - `z-index` works but only between sibling views.
 - `opacity` works. `visibility: hidden` does not exist; use conditional rendering or `opacity: 0`.
 
-**Color extraction**: Extract the Tailwind config from the HTML `<head>`. Map color tokens to a `theme.ts` constants file instead of hardcoding hex values in StyleSheet.
+**Color extraction**: Extract the Tailwind config from the HTML `<head>`. Map color tokens to a `theme.ts` constants file instead of hardcoding hex values in StyleSheet. Use `resources/style-guide.json` as the starting set of design tokens (colors, spacing, typography, border radii) and sync the extracted values into it before generating the theme.
 
 ### Platform-specific code
 When the design requires different behavior on iOS and Android:
