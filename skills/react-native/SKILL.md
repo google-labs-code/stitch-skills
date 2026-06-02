@@ -1,5 +1,5 @@
 ---
-name: react-native
+name: stitch::react-native
 description: Convert Stitch HTML designs to React Native components with StyleSheet
 allowed-tools:
   - "stitch*:*"
