@@ -105,8 +105,8 @@ Code generation, framework integration, and asset compilation from Stitch design
 | Skill | Description | Prompt Example |
 |---|---|---|
 | [stitch::react-components](plugins/stitch-build/skills/react-components/) | Convert Stitch screens to React component systems with automated validation and design token consistency | *"Convert all screens in Stitch project `projects/123` to React components."* |
+| [stitch::react-native](plugins/stitch-build/skills/react-native/) | Convert Stitch HTML designs to production-ready React Native components with StyleSheet and platform-specific code | *"Convert the Stitch design to React Native components with proper theme and navigation."* |
 | [remotion](plugins/stitch-build/skills/remotion/) | Generate walkthrough videos from Stitch projects using Remotion with smooth transitions and zooming | *"Generate a walkthrough video of the Stitch project `projects/456`."* |
-| [react-native](plugins/stitch-build/skills/react-native/) | Convert Stitch HTML designs to production-ready React Native components with StyleSheet and platform-specific code | *"Convert the Stitch design to React Native components with proper theme and navigation."* |
 | [shadcn-ui](plugins/stitch-build/skills/shadcn-ui/) | Expert guidance for integrating and building applications with shadcn/ui components | *"Set up shadcn/ui and build a data table with sorting and filtering."* |
 
 ---
