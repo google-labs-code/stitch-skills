@@ -19,7 +19,8 @@ codex plugin marketplace add google-labs-code/stitch-skills --ref main \
   --sparse .agents/plugins \
   --sparse plugins/stitch-design \
   --sparse plugins/stitch-build \
-  --sparse plugins/stitch-utilities
+  --sparse plugins/stitch-utilities \
+  --sparse plugins/science
 ```
 
 > [!TIP]
@@ -121,6 +122,18 @@ Supporting tools for enhancing prompts, generating design specs, and enforcing d
 | [enhance-prompt](plugins/stitch-utilities/skills/enhance-prompt/) | Transform vague UI ideas into polished, Stitch-optimized prompts with UI/UX keywords | *"Enhance this prompt: 'make a settings page'."* |
 | [stitch-loop](plugins/stitch-utilities/skills/stitch-loop/) | Generate complete multi-page websites from a single prompt with automated validation | *"Build a 5-page portfolio website with Stitch."* |
 | [taste-design](plugins/stitch-utilities/skills/taste-design/) | Generate DESIGN.md files enforcing premium, anti-generic UI standards | *"Generate a premium DESIGN.md with strict typography and calibrated colors."* |
+
+
+### Science (`science`)
+
+Curated collection of agent skills for science tasks, including protein structure analysis, gene variant lookup, chemical databases, literature search, and molecular visualization.
+
+| Skill | Description | Prompt Example |
+|---|---|---|
+| [alphafold-database-fetch-and-analyze](plugins/science/skills/alphafold_database_fetch_and_analyze/) | Retrieve and analyze AlphaFold predicted structures for a protein | *"Retrieve and analyze AlphaFold predicted structure for UniProt ID P12345."* |
+| [uniprot-database](plugins/science/skills/uniprot_database/) | Access protein metadata, function, taxonomy, and sequences across UniProtKB | *"Search UniProt for reviewed proteins associated with human insulin."* |
+| [pubmed-database](plugins/science/skills/pubmed_database/) | Search PubMed for scientific literature and published clinical trials | *"Find recent clinical trials for Alzheimer's disease on PubMed."* |
+| [pymol](plugins/science/skills/pymol/) | Visualize, analyze, and render protein and molecular structures using PyMOL | *"Align protein structures PDB 1A2B and 1C2D in PyMOL."* |
 
 ## Repository Structure
 
