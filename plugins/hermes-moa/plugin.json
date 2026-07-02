@@ -1,0 +1,19 @@
+{
+  "name": "hermes-moa",
+  "description": "Mixture of Agents orchestration for Hermes — configure multi-model presets, run parallel reference analysis, and tune aggregator synthesis for complex tasks.",
+  "version": "1.0.0",
+  "author": {
+    "name": "mmoguljak"
+  },
+  "homepage": "https://github.com/google-labs-code/stitch-skills",
+  "repository": "https://github.com/google-labs-code/stitch-skills",
+  "license": "Apache-2.0",
+  "keywords": [
+    "hermes",
+    "mixture-of-agents",
+    "moa",
+    "multi-model",
+    "orchestration",
+    "parallel-reasoning"
+  ]
+}
