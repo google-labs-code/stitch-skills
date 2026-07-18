@@ -18,7 +18,7 @@ import swc from '@swc/core';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const HEX_COLOR_REGEX = /#[0-9A-Fa-f]{6}/;
+const HEX_COLOR_REGEX = /#[0-9A-Fa-f]{3,8}\b/;
 
 async function validateComponent(filePath) {
   const code = fs.readFileSync(filePath, 'utf-8');
