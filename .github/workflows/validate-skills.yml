@@ -28,3 +28,25 @@ jobs:
 
     - name: Verify Gold Standard Example
       run: node scripts/validate.js examples/gold-standard-card.tsx
+
+  validate-stitch-to-react-native:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: plugins/stitch-build/skills/react-native
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+        cache-dependency-path: plugins/stitch-build/skills/react-native/package-lock.json
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Verify Gold Standard Example
+      run: node scripts/validate.js examples/gold-standard-card.tsx
