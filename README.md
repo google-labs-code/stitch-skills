@@ -1,6 +1,6 @@
 # Stitch Design Skills
 
-A collection of agent skills and plugins for [Google Stitch](https://stitch.withgoogle.com), following the [Agent Skills](https://agentskills.io) open standard. Compatible with coding agents such as Codex, Antigravity, Gemini CLI, Claude Code, and Cursor.
+A collection of agent skills and plugins for [Google Stitch](https://stitch.withgoogle.com), following the [Agent Skills](https://agentskills.io) open standard. Compatible with coding agents such as Codex, Antigravity, Gemini CLI, Claude Code, Cursor, and OpenCode (manual install).
 
 ## Quick Start
 
@@ -58,6 +58,43 @@ npx plugins add google-labs-code/stitch-skills --scope project --target claude-c
 # Cursor — installs into the current workspace
 npx plugins add google-labs-code/stitch-skills --scope workspace --target cursor
 ```
+
+#### OpenCode
+
+OpenCode does **not** use `npx plugins` / `npx skills` or the Codex/Claude marketplace layout.
+Install skills and the Stitch MCP server manually:
+
+**1. Skills** — copy the skill folders you need into a discoverable path:
+
+```bash
+# Project-local (recommended)
+mkdir -p .opencode/skills
+cp -R plugins/stitch-design/skills/generate-design .opencode/skills/generate-design
+# repeat for other skills under plugins/*/skills/
+```
+
+OpenCode also discovers `.claude/skills/` and `.agents/skills/` (see [OpenCode skills docs](https://opencode.ai/docs/skills/)).
+
+> **Naming:** OpenCode requires skill `name` frontmatter to be lowercase kebab-case and match the directory name. Skills that use `stitch::…` names (or other non-kebab forms) need the `name` field and folder renamed before OpenCode will load them. Extra frontmatter such as `allowed-tools` is ignored.
+
+**2. Stitch MCP** — add a remote MCP entry in project `opencode.json` or `~/.config/opencode/opencode.json` after completing the [Stitch MCP setup](https://stitch.withgoogle.com/docs/mcp/setup/):
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "stitch": {
+      "type": "remote",
+      "url": "YOUR_STITCH_MCP_URL",
+      "enabled": true
+    }
+  }
+}
+```
+
+Replace `YOUR_STITCH_MCP_URL` with the endpoint from the Stitch MCP setup flow (credentials/env vars from that guide still apply).
+
+Tool names inside skill instructions may differ from OpenCode builtins (`webfetch` / `bash` instead of `web_fetch` / `run_command`). Prefer the OpenCode tool names when adapting a skill for OpenCode.
 
 ### 2. Install Skills Selectively
 Choose only the specific skills you need.
