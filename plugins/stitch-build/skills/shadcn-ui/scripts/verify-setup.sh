@@ -48,7 +48,7 @@ if [ -f "src/index.css" ] || [ -f "src/globals.css" ] || [ -f "app/globals.css" 
     echo -e "${GREEN}✓${NC} Global CSS file found"
     
     # Check for Tailwind directives
-    CSS_FILE=$(find . -name "globals.css" -o -name "index.css" | head -n 1)
+    CSS_FILE=$(find . -not -path "*/node_modules/*" \( -name "globals.css" -o -name "index.css" \) | head -n 1)
     if grep -q "@tailwind base" "$CSS_FILE"; then
         echo -e "${GREEN}✓${NC} Tailwind directives present"
     else
@@ -75,7 +75,7 @@ if [ -d "src/components/ui" ] || [ -d "components/ui" ]; then
     echo -e "${GREEN}✓${NC} components/ui directory exists"
     
     # Count components
-    COMPONENT_COUNT=$(find . -path "*/components/ui/*.tsx" -o -path "*/components/ui/*.jsx" | wc -l)
+    COMPONENT_COUNT=$(find . -not -path "*/node_modules/*" \( -path "*/components/ui/*.tsx" -o -path "*/components/ui/*.jsx" \) | wc -l)
     echo -e "  ${COMPONENT_COUNT} components installed"
 else
     echo -e "${YELLOW}⚠${NC} components/ui directory not found"
@@ -87,7 +87,7 @@ if [ -f "src/lib/utils.ts" ] || [ -f "lib/utils.ts" ]; then
     echo -e "${GREEN}✓${NC} lib/utils.ts exists"
     
     # Check for cn function
-    UTILS_FILE=$(find . -name "utils.ts" | grep "lib" | head -n 1)
+    UTILS_FILE=$(find . -not -path "*/node_modules/*" -name "utils.ts" | grep "lib" | head -n 1)
     if grep -q "export function cn" "$UTILS_FILE"; then
         echo -e "${GREEN}✓${NC} cn() utility function present"
     else
