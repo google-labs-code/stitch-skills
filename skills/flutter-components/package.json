@@ -1,0 +1,12 @@
+{
+  "name": "flutter-components",
+  "version": "1.0.0",
+  "description": "Validation for Flutter components",
+  "type": "module",
+  "scripts": {
+    "validate": "node scripts/validate.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
