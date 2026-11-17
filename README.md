@@ -159,6 +159,7 @@ Supporting tools for enhancing prompts, generating design specs, and enforcing d
 |---|---|---|
 | [design-md](plugins/stitch-utilities/skills/design-md/) | Analyze Stitch projects and generate comprehensive DESIGN.md files in semantic language | *"Analyze Stitch project `projects/123` and generate a DESIGN.md."* |
 | [enhance-prompt](plugins/stitch-utilities/skills/enhance-prompt/) | Transform vague UI ideas into polished, Stitch-optimized prompts with UI/UX keywords | *"Enhance this prompt: 'make a settings page'."* |
+| [site-md](plugins/stitch-utilities/skills/site-md/) | Analyze a project description or site requirements and synthesize a project constitution (SITE.md) for the Stitch Build Loop | *"Analyze this project brief and create a SITE.md constitution for the Stitch Build Loop."* |
 | [stitch-loop](plugins/stitch-utilities/skills/stitch-loop/) | Generate complete multi-page websites from a single prompt with automated validation | *"Build a 5-page portfolio website with Stitch."* |
 | [taste-design](plugins/stitch-utilities/skills/taste-design/) | Generate DESIGN.md files enforcing premium, anti-generic UI standards | *"Generate a premium DESIGN.md with strict typography and calibrated colors."* |
 
@@ -188,6 +189,7 @@ plugins/
     └── skills/
         ├── design-md/
         ├── enhance-prompt/
+        ├── site-md/
         ├── stitch-loop/
         └── taste-design/
 ```
