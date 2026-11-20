@@ -3,7 +3,7 @@
 ## Install
 
 ```bash
-npx skills add google-labs-code/stitch-skills --skill react-native --global
+npx skills add google-labs-code/stitch-skills --skill "stitch::react-native" --global
 ```
 
 ## Example Prompt
