@@ -21,12 +21,40 @@ else
     exit 1
 fi
 
-# Check if tailwind.config exists
-if [ -f "tailwind.config.js" ] || [ -f "tailwind.config.ts" ]; then
+# Read the configured CSS path. Tailwind v4 deliberately has no config file.
+if ! command -v node >/dev/null 2>&1; then
+    echo -e "${RED}✗${NC} Node.js is required to read components.json"
+    exit 1
+fi
+CSS_FILE=$(node -e '
+    const fs = require("node:fs");
+    const config = JSON.parse(fs.readFileSync("components.json", "utf8"));
+    process.stdout.write(config.tailwind?.css || "");
+')
+if [ -z "$CSS_FILE" ]; then
+    for candidate in src/index.css src/globals.css app/globals.css; do
+        if [ -f "$candidate" ]; then
+            CSS_FILE=$candidate
+            break
+        fi
+    done
+fi
+
+TAILWIND_V4=false
+if [ -f "$CSS_FILE" ] && node -e '
+    const fs = require("node:fs");
+    const css = fs.readFileSync(process.argv[1], "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    process.exit(/@import\s+(["\x27])tailwindcss\1/.test(css) ? 0 : 1);
+' "$CSS_FILE"; then
+    TAILWIND_V4=true
+fi
+
+if [ "$TAILWIND_V4" = true ]; then
+    echo -e "${GREEN}✓${NC} Tailwind CSS-first setup found"
+elif [ -f "tailwind.config.js" ] || [ -f "tailwind.config.ts" ]; then
     echo -e "${GREEN}✓${NC} Tailwind config found"
 else
-    echo -e "${RED}✗${NC} tailwind.config.js not found"
-    echo -e "  ${YELLOW}Install Tailwind:${NC} npm install -D tailwindcss postcss autoprefixer"
+    echo -e "${RED}✗${NC} Tailwind config or CSS-first import not found"
     exit 1
 fi
 
@@ -44,12 +72,11 @@ else
 fi
 
 # Check if globals.css or equivalent exists
-if [ -f "src/index.css" ] || [ -f "src/globals.css" ] || [ -f "app/globals.css" ]; then
+if [ -n "$CSS_FILE" ] && [ -f "$CSS_FILE" ]; then
     echo -e "${GREEN}✓${NC} Global CSS file found"
     
     # Check for Tailwind directives
-    CSS_FILE=$(find . -not -path "*/node_modules/*" \( -name "globals.css" -o -name "index.css" \) | head -n 1)
-    if grep -q "@tailwind base" "$CSS_FILE"; then
+    if [ "$TAILWIND_V4" = true ] || grep -q "@tailwind base" "$CSS_FILE"; then
         echo -e "${GREEN}✓${NC} Tailwind directives present"
     else
         echo -e "${RED}✗${NC} Tailwind directives missing"
@@ -60,7 +87,7 @@ if [ -f "src/index.css" ] || [ -f "src/globals.css" ] || [ -f "app/globals.css" 
     fi
     
     # Check for CSS variables
-    if grep -q "^:root" "$CSS_FILE" || grep -q "@layer base" "$CSS_FILE"; then
+    if grep -q "^:root" "$CSS_FILE" || grep -q "@layer base" "$CSS_FILE" || grep -q "@theme" "$CSS_FILE"; then
         echo -e "${GREEN}✓${NC} CSS variables defined"
     else
         echo -e "${YELLOW}⚠${NC} CSS variables not found"
