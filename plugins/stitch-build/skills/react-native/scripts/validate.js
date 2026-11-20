@@ -20,7 +20,26 @@ import path from 'node:path';
 
 const HEX_COLOR_REGEX = /#[0-9A-Fa-f]{3,8}\b/;
 const RGBA_COLOR_REGEX = /^rgba?\(\s*\d/;
-const HTML_ELEMENTS = ['div', 'span', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'img', 'button', 'a', 'input', 'ul', 'ol', 'li', 'section', 'header', 'footer', 'nav', 'main'];
+// Standard HTML and SVG host elements have no React Native implementation.
+// Unknown names can belong to a custom native view manager and are left alone.
+const WEB_ELEMENTS = new Set(`
+  a abbr address area article aside audio b base bdi bdo blockquote body br button
+  canvas caption cite code col colgroup data datalist dd del details dfn dialog div
+  dl dt em embed fieldset figcaption figure footer form h1 h2 h3 h4 h5 h6 head
+  header hgroup hr html i iframe img input ins kbd label legend li link main map
+  mark menu meta meter nav noscript object ol optgroup option output p picture pre
+  progress q rp rt ruby s samp script search section select slot small source span
+  strong style sub summary sup table tbody td template textarea tfoot th thead time
+  title tr track u ul var video wbr svg animate animateMotion animateTransform circle
+  clipPath defs desc ellipse feBlend feColorMatrix feComponentTransfer feComposite
+  feConvolveMatrix feDiffuseLighting feDisplacementMap feDistantLight feDropShadow
+  feFlood feFuncA feFuncB feFuncG feFuncR feGaussianBlur feImage feMerge feMergeNode
+  feMorphology feOffset fePointLight feSpecularLighting feSpotLight feTile feTurbulence
+  filter foreignObject g image line linearGradient marker mask metadata mpath path
+  pattern polygon polyline radialGradient rect set stop switch symbol text textPath
+  tspan use view
+`.trim().split(/\s+/));
+
 
 async function validateComponent(filePath) {
   if (!filePath) {
@@ -66,7 +85,7 @@ async function validateComponent(filePath) {
       // Check for HTML elements used as JSX tags
       if (node.type === 'JSXOpeningElement' && node.name?.type === 'Identifier') {
         const tagName = node.name.value;
-        if (HTML_ELEMENTS.includes(tagName)) {
+        if (WEB_ELEMENTS.has(tagName)) {
           htmlElements.push(tagName);
         }
       }
