@@ -3,7 +3,7 @@
 ## Install
 
 ```bash
-npx skills add google-labs-code/stitch-skills --skill react:components --global
+npx skills add google-labs-code/stitch-skills --skill "stitch::react-components" --global
 ```
 
 ## Example Prompt
