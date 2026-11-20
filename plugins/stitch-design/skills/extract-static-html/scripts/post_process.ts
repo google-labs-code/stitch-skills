@@ -221,7 +221,31 @@ function extractCssUrls(text: string): CssUrlRef[] {
 // ---------------------------------------------------------------------------
 // Local path resolution
 // ---------------------------------------------------------------------------
+function localPathname(reference: string): string {
+  const pathname = reference.split(/[?#]/, 1)[0];
+  try {
+    return decodeURIComponent(pathname);
+  } catch {
+    // Keep malformed percent escapes usable as literal filesystem names.
+    return pathname;
+  }
+}
+
+function fragmentSuffix(reference: string): string {
+  const index = reference.indexOf('#');
+  return index < 0 ? '' : reference.slice(index);
+}
+
+function cssUrl(value: string): string {
+  // Unquoted URLs avoid colliding with either HTML style-attribute delimiter.
+  const escaped = value.replace(/[\s"'()\\]/g, (character) =>
+    `\\${character.codePointAt(0)!.toString(16)} `,
+  );
+  return `url(${escaped})`;
+}
+
 function resolveLocalFile(localPath: string, baseDir: string): string | null {
+  localPath = localPathname(localPath);
   const candidates = [localPath];
   if (baseDir) {
     candidates.push(path.join(baseDir, localPath.replace(/^\//, '')));
@@ -278,7 +302,8 @@ function isLocalPath(url: string): boolean {
     !url.startsWith('http://') &&
     !url.startsWith('https://') &&
     !url.startsWith('data:') &&
-    !url.startsWith('//')
+    !url.startsWith('//') &&
+    !url.startsWith('#')
   );
 }
 
@@ -328,7 +353,7 @@ function inlineImages(
       }
 
       stats.srcInlined++;
-      return `${attr}="data:${result.mime};base64,${result.b64}"`;
+      return `${attr}="data:${result.mime};base64,${result.b64}${fragmentSuffix(localPath)}"`;
     });
   }
 
@@ -360,9 +385,10 @@ function inlineImages(
       continue;
     }
 
+    const dataUri = `data:${result.mime};base64,${result.b64}${fragmentSuffix(ref.url)}`;
     html =
       html.substring(0, ref.start) +
-      `url('data:${result.mime};base64,${result.b64}')` +
+      cssUrl(dataUri) +
       html.substring(ref.end);
     stats.urlInlined++;
   }
@@ -371,7 +397,7 @@ function inlineImages(
   const svgHrefRegex = /(href|xlink:href)="((?!https?:\/\/|data:|\/\/)[^"]+)"/g;
   html = html.replace(svgHrefRegex, (match: string, attrName: string, localPath: string) => {
     // Skip non-image hrefs (like <a href>)
-    if (!localPath.match(/\.(svg|png|jpg|jpeg|gif|webp|avif|bmp|ico)$/i)) {
+    if (!localPathname(localPath).match(/\.(svg|png|jpg|jpeg|gif|webp|avif|bmp|ico)$/i)) {
       return match;
     }
 
@@ -397,7 +423,7 @@ function inlineImages(
     }
 
     stats.srcInlined++;
-    return `${attrName}="data:${result.mime};base64,${result.b64}"`;
+    return `${attrName}="data:${result.mime};base64,${result.b64}${fragmentSuffix(localPath)}"`;
   });
 
   return { html, stats };

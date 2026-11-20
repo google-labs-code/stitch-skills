@@ -7,6 +7,17 @@ on:
     branches: [ main ]
 
 jobs:
+
+  validate-helper-scripts:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '24.x'
+    - name: Verify helper script regressions
+      run: find plugins -name '*.test.mjs' -print0 | xargs -0 node --test
+
   validate-stitch-to-react:
     runs-on: ubuntu-latest
     defaults:
