@@ -29,6 +29,9 @@ jobs:
     - name: Verify Gold Standard Example
       run: node scripts/validate.js examples/gold-standard-card.tsx
 
+    - name: Verify validator regressions
+      run: npm test
+
   validate-stitch-to-react-native:
     runs-on: ubuntu-latest
     defaults:

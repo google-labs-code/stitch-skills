@@ -34,6 +34,20 @@ async function validateComponent(filePath) {
 
     console.log("🔍 Scanning AST...");
 
+    const scanClassName = (node) => {
+      if (!node || typeof node !== 'object') return;
+      const text = node.type === 'StringLiteral' ? node.value
+        : node.type === 'TemplateElement' ? (node.cooked ?? node.raw) : null;
+      if (typeof text === 'string' && HEX_COLOR_REGEX.test(text)) {
+        tailwindIssues.push(text);
+      }
+      for (const key in node) {
+        if (key !== 'span' && node[key] && typeof node[key] === 'object') {
+          scanClassName(node[key]);
+        }
+      }
+    };
+
     const walk = (node) => {
       if (!node || typeof node !== 'object') return;
       if (Array.isArray(node)) {
@@ -43,7 +57,7 @@ async function validateComponent(filePath) {
       if (typeof node.type !== 'string') return;
       if (node.type === 'TsInterfaceDeclaration' && node.id.value.endsWith('Props')) hasInterface = true;
       if (node.type === 'JSXAttribute' && (node.name?.value === 'className' || node.name?.name === 'className')) {
-        if (node.value?.value && HEX_COLOR_REGEX.test(node.value.value)) tailwindIssues.push(node.value.value);
+        scanClassName(node.value);
       }
       for (const key in node) {
         if (key === 'span') continue;
