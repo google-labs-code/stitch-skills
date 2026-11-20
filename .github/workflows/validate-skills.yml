@@ -50,3 +50,6 @@ jobs:
 
     - name: Verify Gold Standard Example
       run: node scripts/validate.js examples/gold-standard-card.tsx
+
+    - name: Verify native validator regressions
+      run: npm test
