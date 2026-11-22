@@ -9,6 +9,9 @@ RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Every ✗ line below is a failed requirement; warnings (⚠) are advisory only.
+FAILED=0
+
 echo "🔍 Verifying shadcn/ui setup..."
 echo ""
 
@@ -84,6 +87,7 @@ if [ -n "$CSS_FILE" ] && [ -f "$CSS_FILE" ]; then
         echo "  @tailwind base;"
         echo "  @tailwind components;"
         echo "  @tailwind utilities;"
+        FAILED=1
     fi
     
     # Check for CSS variables
@@ -95,6 +99,7 @@ if [ -n "$CSS_FILE" ] && [ -f "$CSS_FILE" ]; then
     fi
 else
     echo -e "${RED}✗${NC} Global CSS file not found"
+    FAILED=1
 fi
 
 # Check if components/ui directory exists
@@ -119,9 +124,11 @@ if [ -f "src/lib/utils.ts" ] || [ -f "lib/utils.ts" ]; then
         echo -e "${GREEN}✓${NC} cn() utility function present"
     else
         echo -e "${RED}✗${NC} cn() utility function missing"
+        FAILED=1
     fi
 else
     echo -e "${RED}✗${NC} lib/utils.ts not found"
+    FAILED=1
 fi
 
 # Check package.json dependencies
@@ -138,6 +145,7 @@ if [ -f "package.json" ]; then
             echo -e "${GREEN}✓${NC} $dep installed"
         else
             echo -e "${RED}✗${NC} $dep not installed"
+            FAILED=1
         fi
     done
     
@@ -153,6 +161,11 @@ if [ -f "package.json" ]; then
 fi
 
 echo ""
+if [ "$FAILED" -ne 0 ]; then
+    echo -e "${RED}✗${NC} Setup verification failed."
+    echo "Fix the ✗ items above, then re-run this script."
+    exit 1
+fi
 echo -e "${GREEN}✓${NC} Setup verification complete!"
 echo ""
 echo "Next steps:"
