@@ -35,6 +35,13 @@ import path from 'node:path';
 import https from 'node:https';
 import http from 'node:http';
 import type { Node } from '@babel/types';
+import {
+  decodeHtmlAttribute,
+  escapeHtmlAttribute,
+  escapeHtmlText,
+  escapeRawText,
+  formatStyleValue,
+} from './html_serialize.ts';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -492,56 +499,72 @@ async function embedImages(html: string, concurrency: number, timeout: number): 
   const limit = createLimiter(concurrency);
 
   // --- Embed <img src="https://..."> ---
-  const srcMatches = [...html.matchAll(/src="(https?:\/\/[^"]+)"/g)];
-  const srcImageMatches = srcMatches.filter((m) => isImageUrl(m[1]));
+  const srcMatches = [...html.matchAll(/src="(https?:\/\/[^"]+)"/g)]
+    .map((match) => ({ text: match[0], url: decodeHtmlAttribute(match[1]) }));
+  const srcImageMatches = srcMatches.filter((m) => isImageUrl(m.url));
 
   // Prefetch all URLs concurrently
   await Promise.all(
-    srcImageMatches.map((m) => limit(() => fetchAndEncode(m[1], timeout))),
+    srcImageMatches.map((m) => limit(() => fetchAndEncode(m.url, timeout))),
   );
 
   // Replace (cache is now warm — synchronous lookups)
   for (const m of srcImageMatches) {
-    const encoded = imgCache.get(m[1]);
-    if (encoded && encoded !== m[1]) {
-      html = html.replace(m[0], `src="${encoded}"`);
+    const encoded = imgCache.get(m.url);
+    if (encoded && encoded !== m.url) {
+      html = html.replace(m.text, `src="${escapeHtmlAttribute(encoded)}"`);
     }
   }
 
   // --- Embed CSS url("https://...") using robust parser ---
-  const cssUrlRefs = extractCssUrls(html);
-  const httpUrlRefs = cssUrlRefs.filter(
-    (ref) =>
-      (ref.url.startsWith('http://') || ref.url.startsWith('https://')) &&
-      isImageUrl(ref.url),
-  );
+  const cssSegments = [
+    ...[...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g)].map((match) => ({
+      text: match[1], start: match.index! + match[0].indexOf('>') + 1, attribute: false,
+    })),
+    ...[...html.matchAll(/\bstyle="([^"]*)"/g)].map((match) => ({
+      text: match[1], start: match.index! + 7, attribute: true,
+    })),
+  ].sort((a, b) => b.start - a.start);
+  for (const segment of cssSegments) {
+    const css = segment.attribute ? decodeHtmlAttribute(segment.text) : segment.text;
+    const cssUrlRefs = extractCssUrls(css);
+    const httpUrlRefs = cssUrlRefs.filter(
+      (ref) =>
+        (ref.url.startsWith('http://') || ref.url.startsWith('https://')) &&
+        isImageUrl(ref.url),
+    );
 
-  // Prefetch all CSS url() references concurrently
-  await Promise.all(
-    httpUrlRefs.map((ref) => limit(() => fetchAndEncode(ref.url, timeout))),
-  );
+    // Prefetch all CSS url() references concurrently
+    await Promise.all(
+      httpUrlRefs.map((ref) => limit(() => fetchAndEncode(ref.url, timeout))),
+    );
 
-  // Replace from end-to-start to preserve indices
-  const replacements: Array<{ start: number; end: number; dataUri: string }> = [];
-  for (const ref of httpUrlRefs) {
-    const encoded = imgCache.get(ref.url);
-    if (encoded && encoded !== ref.url) {
-      replacements.push({ start: ref.start, end: ref.end, dataUri: encoded });
+    // Replace from end-to-start to preserve indices
+    const replacements: Array<{ start: number; end: number; dataUri: string }> = [];
+    for (const ref of httpUrlRefs) {
+      const encoded = imgCache.get(ref.url);
+      if (encoded && encoded !== ref.url) {
+        replacements.push({ start: ref.start, end: ref.end, dataUri: encoded });
+      }
     }
-  }
-  if (replacements.length > 0) {
-    html = replaceCssUrlsInText(html, replacements);
+    if (replacements.length > 0) {
+      const inlined = replaceCssUrlsInText(css, replacements);
+      html = html.substring(0, segment.start) +
+        (segment.attribute ? escapeHtmlAttribute(inlined) : inlined) +
+        html.substring(segment.start + segment.text.length);
+    }
   }
 
   // --- Embed <video poster="https://..."> ---
-  const posterMatches = [...html.matchAll(/poster="(https?:\/\/[^"]+)"/g)];
+  const posterMatches = [...html.matchAll(/poster="(https?:\/\/[^"]+)"/g)]
+    .map((match) => ({ text: match[0], url: decodeHtmlAttribute(match[1]) }));
   await Promise.all(
-    posterMatches.map((m) => limit(() => fetchAndEncode(m[1], timeout))),
+    posterMatches.map((m) => limit(() => fetchAndEncode(m.url, timeout))),
   );
   for (const m of posterMatches) {
-    const encoded = imgCache.get(m[1]);
-    if (encoded && encoded !== m[1]) {
-      html = html.replace(m[0], `poster="${encoded}"`);
+    const encoded = imgCache.get(m.url);
+    if (encoded && encoded !== m.url) {
+      html = html.replace(m.text, `poster="${escapeHtmlAttribute(encoded)}"`);
     }
   }
 
@@ -672,11 +695,11 @@ function renderNode(node: any): string {
     case 'JSXFragment':
       return node.children.map(renderNode).join('');
     case 'JSXText':
-      return node.value;
+      return escapeHtmlText(node.value);
     case 'JSXExpressionContainer':
       return renderExpression(node.expression);
     case 'StringLiteral':
-      return node.value;
+      return escapeHtmlText(node.value);
     default:
       return '';
   }
@@ -688,15 +711,29 @@ function renderExpression(expr: any): string {
     case 'JSXEmptyExpression':
       return '';
     case 'StringLiteral':
-      return expr.value;
+      return escapeHtmlText(expr.value);
     case 'NumericLiteral':
-      return String(expr.value);
+      return escapeHtmlText(String(expr.value));
     case 'TemplateLiteral':
-      // Flatten template literals — just join the quasis
-      return expr.quasis.map((q: any) => q.value.raw).join('');
+      return escapeHtmlText(expr.quasis.map((q: any) => q.value.cooked ?? q.value.raw).join(''));
     default:
       console.warn(`  WARN: Unhandled JSX expression of type "${expr.type}" inside child node.`);
       return '';
+  }
+}
+
+function renderRawTextChild(node: any): string {
+  switch (node.type) {
+    case 'JSXText':
+    case 'StringLiteral':
+    case 'NumericLiteral':
+      return String(node.value);
+    case 'JSXExpressionContainer':
+      return renderRawTextChild(node.expression);
+    case 'TemplateLiteral':
+      return node.quasis.map((q: any) => q.value.cooked ?? q.value.raw).join('');
+    default:
+      return renderNode(node);
   }
 }
 
@@ -722,7 +759,12 @@ function renderElement(node: any): string {
     return `<${tagName}${attrs}/>`;
   }
 
-  const children = node.children.map(renderNode).join('');
+  let children = tagName === 'style' || tagName === 'script'
+    ? escapeRawText(tagName, node.children.map(renderRawTextChild).join(''))
+    : node.children.map(renderNode).join('');
+  if (tagName === 'textarea' && children.startsWith('\n')) {
+    children = '\n' + children;
+  }
 
   if (selfClosing && !VOID_ELEMENTS.has(tagName)) {
     return `<${tagName}${attrs}></${tagName}>`;
@@ -768,20 +810,20 @@ function renderAttributes(attrs: any[], tagName: string): string {
     if (attr.value.type === 'StringLiteral') {
       // Skip `to` attribute from Link (already handled)
       if (name === 'to') continue;
-      parts.push(`${name}="${attr.value.value}"`);
+      parts.push(`${name}="${escapeHtmlAttribute(attr.value.value)}"`);
     } else if (attr.value.type === 'JSXExpressionContainer') {
       const expr = attr.value.expression;
       if (name === 'style' && expr.type === 'ObjectExpression') {
         // Convert style={{...}} to style="..."
         const styleStr = renderStyleObject(expr);
-        if (styleStr) parts.push(`style="${styleStr}"`);
+        if (styleStr) parts.push(`style="${escapeHtmlAttribute(styleStr)}"`);
       } else if (expr.type === 'StringLiteral') {
-        parts.push(`${name}="${expr.value}"`);
+        parts.push(`${name}="${escapeHtmlAttribute(expr.value)}"`);
       } else if (expr.type === 'NumericLiteral') {
-        parts.push(`${name}="${expr.value}"`);
+        parts.push(`${name}="${escapeHtmlAttribute(String(expr.value))}"`);
       } else if (expr.type === 'TemplateLiteral') {
-        const val = expr.quasis.map((q: any) => q.value.raw).join('');
-        parts.push(`${name}="${val}"`);
+        const val = expr.quasis.map((q: any) => q.value.cooked ?? q.value.raw).join('');
+        parts.push(`${name}="${escapeHtmlAttribute(val)}"`);
       } else {
         console.warn(`  WARN: Unhandled JSX expression of type "${expr.type}" inside attribute "${name}".`);
       }
@@ -797,12 +839,12 @@ function renderStyleObject(objExpr: any): string {
     if (prop.type !== 'ObjectProperty') continue;
     const key = prop.key.name || prop.key.value;
     if (!key) continue;
-    const cssKey = camelToKebab(key);
+    const cssKey = key.startsWith('--') ? key : camelToKebab(key);
 
     let val: string | undefined;
     if (prop.value.type === 'StringLiteral') val = prop.value.value;
-    else if (prop.value.type === 'NumericLiteral') val = prop.value.value === 0 ? '0' : `${prop.value.value}px`;
-    else if (prop.value.type === 'TemplateLiteral') val = prop.value.quasis.map((q: any) => q.value.raw).join('');
+    else if (prop.value.type === 'NumericLiteral') val = formatStyleValue(key, prop.value.value);
+    else if (prop.value.type === 'TemplateLiteral') val = prop.value.quasis.map((q: any) => q.value.cooked ?? q.value.raw).join('');
     else continue;
 
     pairs.push(`${cssKey}: ${val}`);
@@ -846,7 +888,7 @@ function extractFromHtml(htmlPath: string | null): { styles: string; links: stri
   }
   // Extract stylesheet <link> tags with http URLs
   for (const m of html.matchAll(/<link[^>]+href="([^"]+)"[^>]*rel="stylesheet"[^>]*\/?>|<link[^>]+rel="stylesheet"[^>]*href="([^"]+)"[^>]*\/?>/g)) {
-    const href = m[1] || m[2];
+    const href = decodeHtmlAttribute(m[1] || m[2]);
     if (href?.startsWith('http')) links.push(href);
   }
   return { styles: styles.join('\n'), links };
@@ -897,7 +939,7 @@ function buildHead(opts: Opts): string {
   const htmlExtra = extractFromHtml(opts.extraCss);
 
   // Build head
-  const htmlAttrs = opts.htmlClass ? ` lang="en" class="${opts.htmlClass}"` : ' lang="en"';
+  const htmlAttrs = opts.htmlClass ? ` lang="en" class="${escapeHtmlAttribute(opts.htmlClass)}"` : ' lang="en"';
   let head = `<!DOCTYPE html>\n<html${htmlAttrs}><head>\n<meta charset="utf-8"/>\n<meta content="width=device-width, initial-scale=1.0" name="viewport"/>\n`;
 
   if (useTailwind) {
@@ -907,12 +949,12 @@ function buildHead(opts: Opts): string {
   // @import → <link> (using robust parser)
   for (const imp of indexCss.imports) {
     const href = extractImportUrl(imp);
-    if (href) head += `<link href="${href}" rel="stylesheet"/>\n`;
+    if (href) head += `<link href="${escapeHtmlAttribute(href)}" rel="stylesheet"/>\n`;
   }
 
   // Extra font links from index.html
   for (const href of htmlExtra.links) {
-    head += `<link href="${href}" rel="stylesheet"/>\n`;
+    head += `<link href="${escapeHtmlAttribute(href)}" rel="stylesheet"/>\n`;
   }
 
   // Tailwind config
