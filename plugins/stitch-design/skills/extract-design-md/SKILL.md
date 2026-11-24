@@ -8,7 +8,11 @@ description: >-
   the user wants to reverse-engineer a design system from an existing codebase, audit
   the visual language of a project, extract design tokens from source files, or
   understand the styling patterns in a frontend repo — even if they just say "what
-  does this app look like?" or "pull out the design from this code."
+  does this app look like?" or "pull out the design from this code." Also use this
+  skill when the user only has a live website URL — a client site, a reference
+  site, or a product whose code isn't available — and wants its design system
+  extracted as a DESIGN.md, even if they just give the URL and say "pull the
+  design from this site."
 allowed-tools:
   - "stitch*:*"
   - "Bash"
@@ -48,8 +52,12 @@ files, theme configs, and Tailwind setups. It's faster and works anywhere.
 - Source-code mode: access to the frontend project's source directory
 - Source-code mode: no build or runtime dependencies needed — this skill
   reads source files only
-- Live-URL mode only: a Firecrawl API key (`FIRECRAWL_API_KEY`). Without one,
-  use the source-code path or ask the user for the source
+- Live-URL mode only: Node.js with `puppeteer` available (check:
+  `node -e "require('puppeteer')"`; if missing, run `npm install puppeteer`
+  in the directory you will run the extraction script from) — the same
+  headless Chrome tooling the `extract-static-html` skill uses. No API key
+  and no third-party extraction service: the page is rendered locally and
+  the URL is never sent anywhere except the site itself
 
 ---
 
@@ -122,42 +130,99 @@ extraction as the Phase 1 input instead of the source tree. The source-code
 path above stays the default; this mode changes where the raw values come
 from, not what Phases 2 and 3 produce.
 
-Call the Firecrawl scrape API with the `branding` and `screenshot` formats:
+Render the page locally with headless Chrome via Puppeteer, the same
+approach the `extract-static-html` skill uses for its snapshot script. The
+browser runs on the user's machine and fetches the URL directly, so nothing
+is sent to a third-party extraction service and no API key is needed.
 
-```bash
-curl -s -X POST https://api.firecrawl.dev/v2/scrape \
-  -H "Authorization: Bearer $FIRECRAWL_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"url":"<URL>","formats":["branding","screenshot"]}'
+Create the output directory (`mkdir -p .stitch`), save the script below as
+`extract-live-url.mjs`, replace `<URL>`, and run it
+with `node extract-live-url.mjs`. It writes a screenshot to the local file
+`.stitch/live-url-screenshot.png` and prints the rendered page's computed
+styles as JSON:
+
+```js
+import puppeteer from 'puppeteer';
+
+const browser = await puppeteer.launch({
+  headless: true,
+  args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+});
+const page = await browser.newPage();
+await page.setViewport({ width: 1920, height: 1080 });
+await page.goto('<URL>', { waitUntil: 'networkidle2' });
+await page.screenshot({ path: '.stitch/live-url-screenshot.png' });
+
+const styles = await page.evaluate(() => {
+  const pick = (el, props) => {
+    if (!el) return null;
+    const cs = getComputedStyle(el);
+    return Object.fromEntries(props.map((p) => [p, cs.getPropertyValue(p)]));
+  };
+  const textProps = ['font-family', 'font-size', 'font-weight', 'line-height', 'letter-spacing', 'color'];
+  const root = getComputedStyle(document.documentElement);
+  const customProps = {};
+  for (let i = 0; i < root.length; i++) {
+    const name = root[i];
+    if (name.startsWith('--')) customProps[name] = root.getPropertyValue(name).trim();
+  }
+  return {
+    title: document.title,
+    colorScheme: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
+    body: pick(document.body, [...textProps, 'background-color']),
+    h1: pick(document.querySelector('h1'), textProps),
+    h2: pick(document.querySelector('h2'), textProps),
+    link: pick(document.querySelector('a'), ['color']),
+    button: pick(
+      document.querySelector('button, [role="button"], input[type="submit"]'),
+      ['background-color', 'color', 'border-radius', 'padding']
+    ),
+    card: pick(document.querySelector('article, section, [class*="card"]'), ['background-color', 'border-radius', 'padding']),
+    spacingSamples: [...document.querySelectorAll('body *')]
+      .slice(0, 200)
+      .flatMap((el) => {
+        const cs = getComputedStyle(el);
+        return [cs.marginTop, cs.marginBottom, cs.paddingTop, cs.paddingBottom];
+      })
+      .filter((v) => v && v !== '0px'),
+    customProps,
+    logo: document.querySelector('link[rel~="icon"]')?.href ?? null,
+    ogImage: document.querySelector('meta[property="og:image"]')?.content ?? null,
+  };
+});
+console.log(JSON.stringify(styles, null, 2));
+await browser.close();
 ```
 
-The `branding` object returns values read from the rendered page — palette,
-fonts, type scale, spacing base unit, button styles, and logo — which a plain
-HTML fetch does not expose. Map them onto the same DESIGN.md frontmatter keys
+The computed styles are values read from the rendered page — palette, fonts,
+type scale, spacing, and button styles — which a plain HTML fetch does not
+expose. Colors come back as `rgb()` strings; convert them to hex when
+writing the frontmatter. Map them onto the same DESIGN.md frontmatter keys
 and sections the source path produces:
 
-| Branding field | DESIGN.md target |
+| Rendered-page value | DESIGN.md target |
 |:---|:---|
-| `brandName` | frontmatter `name` |
+| `title` | frontmatter `name` |
 | `colorScheme` (`light` / `dark`) | §1 Visual Theme & Atmosphere; color role assignment in Phase 2 |
-| `colors.primary` | `colors.primary` |
-| `colors.secondary` | `colors.secondary` |
-| `colors.background` | `colors.background` and `colors.surface` |
-| `colors.textPrimary` | `colors.on-background` and `colors.on-surface` |
-| `colors.link` | §2 Accent & Interactive (link color) |
-| `fonts[].family` (`role: heading`) | `typography` `fontFamily` for display/headline entries |
-| `fonts[].family` (`role: body`) | `typography` `fontFamily` for body entries |
-| `typography.fontSizes.h1` / `h2` / `body` | `typography` `fontSize` for display/headline/body entries |
-| `spacing.baseUnit` | `spacing.unit` |
-| `spacing.borderRadius` | `rounded.DEFAULT` |
-| `components.buttonPrimary.background` / `textColor` / `borderRadius` | §4 Buttons; cross-check against `colors.primary` / `colors.on-primary` |
-| `logo`, `favicon`, OG image | Brand assets note in §1 |
-| `data.screenshot` | Read it in Phase 2 §1 to write the atmosphere paragraph |
+| `button.background-color` (primary call to action) | `colors.primary` |
+| `card.background-color` | `colors.secondary` |
+| `body.background-color` | `colors.background` and `colors.surface` |
+| `body.color` | `colors.on-background` and `colors.on-surface` |
+| `link.color` | §2 Accent & Interactive (link color) |
+| `h1` / `h2` `font-family` | `typography` `fontFamily` for display/headline entries |
+| `body` `font-family` | `typography` `fontFamily` for body entries |
+| `h1` / `h2` / `body` `font-size`, `font-weight`, `line-height`, `letter-spacing` | `typography` entries for display/headline/body |
+| Smallest recurring increment in `spacingSamples` | `spacing.unit` |
+| `button.border-radius` | `rounded.DEFAULT` |
+| `button.background-color` / `color` / `border-radius` / `padding` | §4 Buttons; cross-check against `colors.primary` / `colors.on-primary` |
+| `customProps` (`--color-*`, `--spacing-*`, and similar tokens) | Cross-check for the color, spacing, and typography values above |
+| `logo`, `ogImage` | Brand assets note in §1 |
+| `.stitch/live-url-screenshot.png` (local file) | Read it in Phase 2 §1 to write the atmosphere paragraph |
 
 Then continue with Phase 2 using these values as the extracted raw data, and
 write the DESIGN.md in Phase 3 as usual.
 
-The branding response only covers what the rendered page exposes. It has no
+The rendered page only covers what one page in one state exposes. It has no
 hover/focus states, breakpoints, or functional (success/error) colors — do
 not invent those. Mark dimensions you could not observe as unknown, and say
 in the delivery notes that the document came from a live page rather than
@@ -398,8 +463,9 @@ Before delivering the DESIGN.md, verify:
 - [ ] The atmosphere section reads like editorial copy, not technical docs
 - [ ] Near-duplicate colors are consolidated
 - [ ] The document captures the *intent* behind styling, not just raw values
-- [ ] Live-URL mode only: every value traces to the branding response or the
-  screenshot, and unobserved dimensions are marked unknown, not invented
+- [ ] Live-URL mode only: every value traces to the locally rendered page's
+  computed styles or the local screenshot file, and unobserved dimensions
+  are marked unknown, not invented
 
 ## Tips for Better Extraction
 
