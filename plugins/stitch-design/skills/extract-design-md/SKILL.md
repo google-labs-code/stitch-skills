@@ -40,11 +40,16 @@ files, theme configs, and Tailwind setups. It's faster and works anywhere.
 - User wants to create a DESIGN.md from existing source code
 - The app can't be built/rendered but the source is available
 - User wants to unify or reconcile inconsistent styles across a codebase
+- User only has a website URL (a client site, a reference site, a product whose
+  code isn't available) and wants its design system as a DESIGN.md
 
 ## Prerequisites
 
-- Access to the frontend project's source directory
-- No build or runtime dependencies needed — this skill reads source files only
+- Source-code mode: access to the frontend project's source directory
+- Source-code mode: no build or runtime dependencies needed — this skill
+  reads source files only
+- Live-URL mode only: a Firecrawl API key (`FIRECRAWL_API_KEY`). Without one,
+  use the source-code path or ask the user for the source
 
 ---
 
@@ -109,6 +114,54 @@ Consult the appropriate reference for extraction patterns:
 These references contain framework-specific patterns for locating colors,
 typography, spacing, and component styles. Read the one that matches before
 proceeding.
+
+#### 4. Alternative Input: From a Live URL
+
+If the user has only a URL and no source code on disk, use a rendered-page
+extraction as the Phase 1 input instead of the source tree. The source-code
+path above stays the default; this mode changes where the raw values come
+from, not what Phases 2 and 3 produce.
+
+Call the Firecrawl scrape API with the `branding` and `screenshot` formats:
+
+```bash
+curl -s -X POST https://api.firecrawl.dev/v2/scrape \
+  -H "Authorization: Bearer $FIRECRAWL_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"<URL>","formats":["branding","screenshot"]}'
+```
+
+The `branding` object returns values read from the rendered page — palette,
+fonts, type scale, spacing base unit, button styles, and logo — which a plain
+HTML fetch does not expose. Map them onto the same DESIGN.md frontmatter keys
+and sections the source path produces:
+
+| Branding field | DESIGN.md target |
+|:---|:---|
+| `brandName` | frontmatter `name` |
+| `colorScheme` (`light` / `dark`) | §1 Visual Theme & Atmosphere; color role assignment in Phase 2 |
+| `colors.primary` | `colors.primary` |
+| `colors.secondary` | `colors.secondary` |
+| `colors.background` | `colors.background` and `colors.surface` |
+| `colors.textPrimary` | `colors.on-background` and `colors.on-surface` |
+| `colors.link` | §2 Accent & Interactive (link color) |
+| `fonts[].family` (`role: heading`) | `typography` `fontFamily` for display/headline entries |
+| `fonts[].family` (`role: body`) | `typography` `fontFamily` for body entries |
+| `typography.fontSizes.h1` / `h2` / `body` | `typography` `fontSize` for display/headline/body entries |
+| `spacing.baseUnit` | `spacing.unit` |
+| `spacing.borderRadius` | `rounded.DEFAULT` |
+| `components.buttonPrimary.background` / `textColor` / `borderRadius` | §4 Buttons; cross-check against `colors.primary` / `colors.on-primary` |
+| `logo`, `favicon`, OG image | Brand assets note in §1 |
+| `data.screenshot` | Read it in Phase 2 §1 to write the atmosphere paragraph |
+
+Then continue with Phase 2 using these values as the extracted raw data, and
+write the DESIGN.md in Phase 3 as usual.
+
+The branding response only covers what the rendered page exposes. It has no
+hover/focus states, breakpoints, or functional (success/error) colors — do
+not invent those. Mark dimensions you could not observe as unknown, and say
+in the delivery notes that the document came from a live page rather than
+source, so inferred sections can be verified against the codebase later.
 
 ---
 
@@ -345,6 +398,8 @@ Before delivering the DESIGN.md, verify:
 - [ ] The atmosphere section reads like editorial copy, not technical docs
 - [ ] Near-duplicate colors are consolidated
 - [ ] The document captures the *intent* behind styling, not just raw values
+- [ ] Live-URL mode only: every value traces to the branding response or the
+  screenshot, and unobserved dimensions are marked unknown, not invented
 
 ## Tips for Better Extraction
 
