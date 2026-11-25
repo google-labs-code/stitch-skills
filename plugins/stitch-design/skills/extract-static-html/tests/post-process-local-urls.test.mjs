@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -11,7 +11,9 @@ const script = fileURLToPath(new URL('../scripts/post_process.ts', import.meta.u
 function processFixture(html, assetName, bytes) {
   const directory = mkdtempSync(path.join(os.tmpdir(), 'stitch-local-urls-'));
   try {
-    writeFileSync(path.join(directory, assetName), bytes);
+    const asset = path.join(directory, assetName);
+    mkdirSync(path.dirname(asset), { recursive: true });
+    writeFileSync(asset, bytes);
     const output = path.join(directory, 'page.html');
     writeFileSync(output, html);
     const result = spawnSync(process.execPath, [script, output, '--base-dir', directory, '--json'], { encoding: 'utf8' });
@@ -44,7 +46,7 @@ test('leaves document-local SVG fragment references intact', () => {
   assert.match(result.stdout, /"totalSkippedNotFound": 0/);
 });
 
-test('quotes CSS data URLs containing an apostrophe in an SVG fragment', () => {
+test('escapes apostrophes in unquoted CSS data URLs for SVG fragments', () => {
   const bytes = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><view id="symbol\'s-view"/></svg>');
   const expected = `data:image/svg+xml;base64,${bytes.toString('base64')}#symbol\\27 s-view`;
   const result = processFixture('<style>.icon{background:url("icons.svg#symbol\'s-view")}</style>', 'icons.svg', bytes);
@@ -71,4 +73,18 @@ test('keeps single-quoted inline style attributes valid', () => {
   const result = processFixture(`<div style='background:url("icons.svg#symbol%27s-view")'></div>`, 'icons.svg', bytes);
   assert.match(result.html, /^<div style='[^']*'><\/div>$/);
   assert.ok(result.html.includes('#symbol%27s-view'), result.html);
+});
+
+test('inlines a leading-slash subdirectory path containing a literal percent escape', () => {
+  const bytes = Buffer.from('nested image fixture');
+  const html = '<img src="/icons/percent%zz.png?cache=2">';
+  const result = processFixture(html, 'icons/percent%zz.png', bytes);
+  assert.ok(result.html.includes(`data:image/png;base64,${bytes.toString('base64')}`), result.html);
+});
+
+test('does not count versioned script and stylesheet references as missing assets', () => {
+  const html = '<script src="app.js?v=2"></script><source src="screen.css?rev=2"><svg><image src="#local"/></svg>';
+  const result = processFixture(html, 'unused.png', 'unused');
+  assert.equal(result.html, html);
+  assert.match(result.stdout, /"totalSkippedNotFound": 0/);
 });

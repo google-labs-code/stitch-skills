@@ -19,7 +19,7 @@ jobs:
       with:
         node-version: '24.x'
     - name: Verify helper script regressions
-      run: find plugins -name '*.test.mjs' -print0 | xargs -0 node --test
+      run: find plugins -name '*.test.mjs' -print0 | xargs -0 -r node --test
 
   validate-stitch-to-react:
     runs-on: ubuntu-latest

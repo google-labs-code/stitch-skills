@@ -246,6 +246,7 @@ function cssUrl(value: string): string {
 
 function resolveLocalFile(localPath: string, baseDir: string): string | null {
   localPath = localPathname(localPath);
+  if (!localPath) return null;
   const candidates = [localPath];
   if (baseDir) {
     candidates.push(path.join(baseDir, localPath.replace(/^\//, '')));
@@ -329,9 +330,11 @@ function inlineImages(
   for (const attr of srcAttrs) {
     const regex = new RegExp(`${attr}="((?!https?:\\/\\/|data:|\\/\\/)[^"]+)"`, 'g');
     html = html.replace(regex, (match: string, localPath: string) => {
+      const pathname = localPathname(localPath);
+      if (!pathname) return match;
       const resolved = resolveLocalFile(localPath, baseDir);
       if (!resolved) {
-        if (!localPath.endsWith('.js') && !localPath.endsWith('.css')) {
+        if (!pathname.endsWith('.js') && !pathname.endsWith('.css')) {
           stats.skippedNotFound.push(localPath);
         }
         return match;
