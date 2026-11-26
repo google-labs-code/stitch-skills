@@ -54,11 +54,13 @@ async function validateComponent(filePath) {
         for (const item of node) walk(item);
         return;
       }
-      if (typeof node.type !== 'string') return;
       if (node.type === 'TsInterfaceDeclaration' && node.id.value.endsWith('Props')) hasInterface = true;
       if (node.type === 'JSXAttribute' && (node.name?.value === 'className' || node.name?.name === 'className')) {
         scanClassName(node.value);
       }
+      // Descend into every object, not only into nodes with a `type`: SWC keeps
+      // call arguments and array elements in `{ spread, expression }` wrappers
+      // and class method bodies in a `function` object, all without a `type`.
       for (const key in node) {
         if (key === 'span') continue;
         if (node[key] && typeof node[key] === 'object') walk(node[key]);
