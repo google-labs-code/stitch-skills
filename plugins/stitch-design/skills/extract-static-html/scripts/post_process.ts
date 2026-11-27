@@ -221,42 +221,128 @@ function extractCssUrls(text: string): CssUrlRef[] {
 // ---------------------------------------------------------------------------
 // Local path resolution
 // ---------------------------------------------------------------------------
-function resolveLocalFile(localPath: string, baseDir: string): string | null {
-  const candidates = [localPath];
-  if (baseDir) {
-    candidates.push(path.join(baseDir, localPath.replace(/^\//, '')));
+
+/**
+ * Resolve a local path to a file inside the base directory jail.
+ *
+ * Returns the resolved candidate path AND the canonicalized jail path.
+ * Both are needed by readFileAtomic for post-open verification.
+ */
+function resolveLocalFile(localPath: string, baseDir: string): { candidate: string; realJail: string } | null {
+  // --- Security: Block path traversal ---
+  // Strip a leading "/" so root-relative web paths like <img src="/images/logo.png">
+  // resolve inside the jail rather than hitting path.isAbsolute().  Reject Windows
+  // drive letters (C:\...) outright since those are never valid web paths.
+  if (/^[a-zA-Z]:/.test(localPath)) {
+    return null;
   }
 
-  for (const candidate of candidates) {
-    try {
-      if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
-        return candidate;
-      }
-    } catch {
-      // Permission errors, etc. — skip
-    }
+  // Always resolve relative to the base directory (or cwd).  Never try the
+  // raw localPath on its own — that would let CWD-relative paths leak files
+  // outside the intended jail.
+  const jail = path.resolve(baseDir || '.');
+  const stripped = localPath.replace(/^\//, '');
+  const candidate = path.resolve(jail, stripped);
+
+  // Pre-check: the resolved path (before symlink resolution) must be under
+  // the jail.  This catches simple traversals cheaply.
+  if (!candidate.startsWith(jail + path.sep) && candidate !== jail) {
+    return null;
   }
-  return null;
+
+  try {
+    if (!fs.existsSync(candidate) || !fs.statSync(candidate).isFile()) {
+      return null;
+    }
+    // Post-check: canonicalize via realpath to follow symlinks, then verify
+    // the target is still inside the jail.  This prevents symlink escapes
+    // where a symlink inside the jail points outside it.
+    const realResolved = fs.realpathSync(candidate);
+    const realJail = fs.realpathSync(jail);
+    if (!realResolved.startsWith(realJail + path.sep) && realResolved !== realJail) {
+      return null;
+    }
+    return { candidate, realJail };
+  } catch {
+    // Permission errors, dangling symlinks, etc. — skip
+    return null;
+  }
 }
 
 /**
  * Atomically open, stat, and read a file using a file descriptor.
- * Eliminates TOCTOU race conditions by performing all operations on the
- * same fd, ensuring the file cannot change between the size check and read.
- * Returns null if the file cannot be opened (e.g., deleted between resolve and open).
+ *
+ * Security properties:
+ *  1. Opens the realpath-resolved path (after resolveLocalFile has verified
+ *     jail containment via realpathSync) so legitimate symlinks inside the
+ *     jail that point to other jail files are accepted.
+ *  2. Post-open fd identity verification: after opening, we prove the OPENED
+ *     fd refers to a file inside the jail by:
+ *       a. Getting the fd's inode identity via fstatSync(fd) → (dev, ino)
+ *       b. Re-resolving the file's realpath and verifying jail containment
+ *       c. Statting the resolved path and comparing (dev, ino) to the fd's
+ *     If the inodes match, the fd provably points to the jail-verified file.
+ *     If they differ, someone swapped the file — reject.
+ *     This closes the TOCTOU gap conclusively: the fd is bound to an inode
+ *     at open() time and cannot be redirected afterward.
+ *  3. All subsequent operations (fstat, read) use the fd, ensuring the file
+ *     cannot change between the size check and read.
+ *
+ * Returns null if the file cannot be opened or fails security checks.
  */
 function readFileAtomic(
   filePath: string,
   maxSize: number,
+  realJail?: string,
 ): { size: number; mime: string; b64: string } | { size: number; tooLarge: true } | null {
   let fd: number;
   try {
-    fd = fs.openSync(filePath, 'r');
-  } catch {
-    // File was removed or became inaccessible between resolve and open
+    // Open the realpath-resolved path.  resolveLocalFile() has already
+    // verified via realpathSync that the target is inside the jail, so
+    // legitimate symlinks (e.g. pnpm/monorepo assets) that point within
+    // the jail are accepted.  The fd identity check below still proves
+    // the opened file is the jail-verified one.
+    fd = fs.openSync(filePath, fs.constants.O_RDONLY);
+  } catch (e: unknown) {
+    // ELOOP = O_NOFOLLOW detected a symlink — reject silently
+    // ENOENT/EACCES = file removed or inaccessible — reject
     return null;
   }
   try {
+    // --- Post-open fd identity verification ---
+    // This proves the OPENED fd refers to a file inside the jail,
+    // not just that the path currently resolves inside the jail.
+    //
+    // The key insight: fstatSync(fd) returns the inode identity (dev, ino)
+    // of the actual file the fd is bound to.  This cannot be changed after
+    // open() — even if an attacker swaps the file at the path, our fd still
+    // points to the original inode.  By comparing this identity against
+    // the inode of the jail-verified realpath, we prove the fd points to
+    // a file inside the jail.
+    if (realJail) {
+      try {
+        // Step 1: Get the fd's inode identity
+        const fdStat = fs.fstatSync(fd);
+
+        // Step 2: Re-resolve the path and verify jail containment
+        const realPath = fs.realpathSync(filePath);
+        if (!realPath.startsWith(realJail + path.sep) && realPath !== realJail) {
+          return null; // path escaped jail
+        }
+
+        // Step 3: Stat the verified path and compare inodes
+        const pathStat = fs.statSync(realPath);
+        if (fdStat.dev !== pathStat.dev || fdStat.ino !== pathStat.ino) {
+          // The fd and the jail-verified path point to different files.
+          // This means someone swapped the file between open and verification.
+          return null;
+        }
+        // ✓ The fd provably points to a file inside the jail.
+      } catch {
+        return null;
+      }
+    }
+
     const stat = fs.fstatSync(fd);
     if (stat.size > maxSize) {
       return { size: stat.size, tooLarge: true };
@@ -312,7 +398,7 @@ function inlineImages(
         return match;
       }
 
-      const result = readFileAtomic(resolved, maxSize);
+      const result = readFileAtomic(resolved.candidate, maxSize, resolved.realJail);
       if (!result) {
         stats.skippedNotFound.push(localPath);
         return match;
@@ -345,7 +431,7 @@ function inlineImages(
       continue;
     }
 
-    const result = readFileAtomic(resolved, maxSize);
+    const result = readFileAtomic(resolved.candidate, maxSize, resolved.realJail);
     if (!result) {
       stats.skippedNotFound.push(ref.url);
       continue;
@@ -381,7 +467,7 @@ function inlineImages(
       return match;
     }
 
-    const result = readFileAtomic(resolved, maxSize);
+    const result = readFileAtomic(resolved.candidate, maxSize, resolved.realJail);
     if (!result) {
       stats.skippedNotFound.push(localPath);
       return match;

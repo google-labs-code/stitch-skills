@@ -34,6 +34,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import https from 'node:https';
 import http from 'node:http';
+import dns from 'node:dns';
 import type { Node } from '@babel/types';
 import {
   decodeHtmlAttribute,
@@ -254,7 +255,140 @@ function isImageUrl(url: string): boolean {
  * Blocks private/internal network addresses and non-HTTP protocols.
  * URLs parsed from HTML files could be attacker-controlled, so we must
  * ensure they only target public internet hosts.
+ *
+ * Defence-in-depth layers:
+ *  1. Protocol allow-list (http/https only).
+ *  2. Hostname deny-list (localhost, cloud-metadata, .internal, single-label).
+ *  3. IPv4 deny-list (all RFC 1918/5737/6598/6890 special-purpose ranges).
+ *  4. IPv6 deny-list (parse IPv6 including mapped/compat forms, check
+ *     the embedded IPv4 against the same deny-list).
+ *  5. Encoded-IP detection (bare decimal, octal, hex).
+ *
+ * This is a *pre-connection* URL-level check (Layer 1).  Connection-time
+ * DNS resolution validation is handled by safeDnsLookup() (Layer 2), and
+ * redirect revalidation is handled by fetchAndEncode() (Layer 3).  Together
+ * these three layers defeat DNS rebinding, redirect-based SSRF, and all
+ * known IP-encoding bypass vectors.
  */
+
+/**
+ * Check whether four octets fall inside any reserved/private IPv4 range.
+ * Covers every range listed in IANA's "Special-Purpose IPv4 Addresses"
+ * registry (RFC 6890) plus broadcast and CGNAT.
+ */
+function isPrivateIPv4(a: number, b: number, c: number, d: number): boolean {
+  if (a > 255 || b > 255 || c > 255 || d > 255) return true; // malformed
+  return (
+    a === 0 ||                              // 0.0.0.0/8      (this network)
+    a === 10 ||                             // 10.0.0.0/8     (RFC 1918)
+    a === 127 ||                            // 127.0.0.0/8    (loopback)
+    (a === 100 && b >= 64 && b <= 127) ||   // 100.64.0.0/10  (CGNAT, RFC 6598)
+    (a === 169 && b === 254) ||             // 169.254.0.0/16 (link-local)
+    (a === 172 && b >= 16 && b <= 31) ||    // 172.16.0.0/12  (RFC 1918)
+    (a === 192 && b === 0 && c === 0) ||    // 192.0.0.0/24   (IETF protocol)
+    (a === 192 && b === 0 && c === 2) ||    // 192.0.2.0/24   (TEST-NET-1)
+    (a === 192 && b === 88 && c === 99) ||  // 192.88.99.0/24 (6to4 relay anycast)
+    (a === 192 && b === 168) ||             // 192.168.0.0/16 (RFC 1918)
+    (a === 198 && (b === 18 || b === 19)) || // 198.18.0.0/15 (benchmark)
+    (a === 198 && b === 51 && c === 100) || // 198.51.100.0/24 (TEST-NET-2)
+    (a === 203 && b === 0 && c === 113) ||  // 203.0.113.0/24 (TEST-NET-3)
+    a >= 224                                // 224.0.0.0/4 + 240.0.0.0/4 (multicast + reserved + broadcast)
+  );
+}
+
+/**
+ * Parse an IPv6 hostname (with brackets) and check whether it represents
+ * a private/reserved address.  Handles:
+ *  - Standard IPv6                   [::1], [fe80::1]
+ *  - IPv6-mapped IPv4                [::ffff:127.0.0.1]
+ *  - IPv6-compatible IPv4 (deprecated) [::127.0.0.1]
+ *  - Hex-only mapped                 [::ffff:7f00:1]
+ *
+ * Returns true if the address is private/reserved (should be blocked).
+ * Returns false if public (safe) or if parsing fails (fail-open would be
+ * dangerous, so we return true — block by default on parse failure).
+ */
+function isPrivateIPv6(bracketedHost: string): boolean {
+  // Strip brackets: "[::1]" → "::1"
+  const addr = bracketedHost.replace(/^\[|\]$/g, '').toLowerCase();
+  if (!addr) return true;
+
+  // Check for embedded dotted-decimal IPv4 at the end:
+  //   ::ffff:192.168.1.1   or   ::192.168.1.1
+  const v4Suffix = addr.match(/(?:^|:)(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (v4Suffix) {
+    const [, a, b, c, d] = v4Suffix.map(Number);
+    return isPrivateIPv4(a, b, c, d);
+  }
+
+  // Expand :: shorthand to full 8-group form
+  let full = addr;
+  if (full.includes('::')) {
+    const [left, right = ''] = full.split('::');
+    const lGroups = left ? left.split(':') : [];
+    const rGroups = right ? right.split(':') : [];
+    const missing = 8 - lGroups.length - rGroups.length;
+    const fill = Array(Math.max(0, missing)).fill('0');
+    full = [...lGroups, ...fill, ...rGroups].join(':');
+  }
+  const groups = full.split(':').map((g) => parseInt(g || '0', 16));
+  if (groups.length !== 8 || groups.some((g) => isNaN(g) || g < 0 || g > 0xffff)) {
+    return true; // malformed → block
+  }
+
+  // Loopback  ::1
+  if (groups[0] === 0 && groups[1] === 0 && groups[2] === 0 && groups[3] === 0 &&
+      groups[4] === 0 && groups[5] === 0 && groups[6] === 0 && groups[7] === 1) {
+    return true;
+  }
+
+  // Unspecified  ::
+  if (groups.every((g) => g === 0)) return true;
+
+  // Link-local  fe80::/10
+  if ((groups[0] & 0xffc0) === 0xfe80) return true;
+
+  // Unique local  fc00::/7
+  if ((groups[0] & 0xfe00) === 0xfc00) return true;
+
+  // IPv4-mapped  ::ffff:x.x.x.x  (hex-only form: groups[6..7] hold the IPv4)
+  if (groups[0] === 0 && groups[1] === 0 && groups[2] === 0 && groups[3] === 0 &&
+      groups[4] === 0 && groups[5] === 0xffff) {
+    const a = (groups[6] >> 8) & 0xff;
+    const b = groups[6] & 0xff;
+    const c = (groups[7] >> 8) & 0xff;
+    const d = groups[7] & 0xff;
+    return isPrivateIPv4(a, b, c, d);
+  }
+
+  // IPv4-compatible (deprecated)  ::x.x.x.x  (groups[5]=0)
+  if (groups[0] === 0 && groups[1] === 0 && groups[2] === 0 && groups[3] === 0 &&
+      groups[4] === 0 && groups[5] === 0 && (groups[6] !== 0 || groups[7] > 1)) {
+    const a = (groups[6] >> 8) & 0xff;
+    const b = groups[6] & 0xff;
+    const c = (groups[7] >> 8) & 0xff;
+    const d = groups[7] & 0xff;
+    return isPrivateIPv4(a, b, c, d);
+  }
+
+  // Teredo  2001:0000::/32
+  if (groups[0] === 0x2001 && groups[1] === 0) return true;
+
+  // Documentation  2001:db8::/32
+  if (groups[0] === 0x2001 && groups[1] === 0x0db8) return true;
+
+  // 6to4  2002::/16 — the embedded IPv4 is in groups[1..2]
+  if (groups[0] === 0x2002) {
+    const a = (groups[1] >> 8) & 0xff;
+    const b = groups[1] & 0xff;
+    const c = (groups[2] >> 8) & 0xff;
+    const d = groups[2] & 0xff;
+    return isPrivateIPv4(a, b, c, d);
+  }
+
+  return false; // appears to be a public IPv6 address
+}
+
 function isSafeUrl(parsed: URL): boolean {
   // Only allow http and https protocols
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
@@ -263,34 +397,140 @@ function isSafeUrl(parsed: URL): boolean {
 
   const hostname = parsed.hostname.toLowerCase();
 
-  // Block localhost variants
-  if (hostname === 'localhost' || hostname === '[::1]') {
+  // Block empty hostname
+  if (!hostname) {
     return false;
   }
 
-  // Block private/reserved IPv4 ranges
+  // Block localhost variants (including subdomains, e.g. x.localhost)
+  if (hostname === 'localhost' || hostname.endsWith('.localhost')) {
+    return false;
+  }
+
+  // --- IPv6 addresses (bracketed) ---
+  if (hostname.startsWith('[') || hostname.includes(':')) {
+    return !isPrivateIPv6(hostname);
+  }
+
+  // --- IPv4 dotted-decimal ---
   const ipv4Match = hostname.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
   if (ipv4Match) {
-    const [, a, b] = ipv4Match.map(Number);
-    if (
-      a === 127 ||          // 127.0.0.0/8  (loopback)
-      a === 10 ||           // 10.0.0.0/8   (private)
-      a === 0 ||            // 0.0.0.0/8    (unspecified)
-      (a === 172 && b >= 16 && b <= 31) || // 172.16.0.0/12 (private)
-      (a === 192 && b === 168) ||          // 192.168.0.0/16 (private)
-      (a === 169 && b === 254)             // 169.254.0.0/16 (link-local)
-    ) {
-      return false;
-    }
+    const [, a, b, c, d] = ipv4Match.map(Number);
+    if (isPrivateIPv4(a, b, c, d)) return false;
+  }
+
+  // Block bare decimal IPs (e.g., 2130706433 = 127.0.0.1) and
+  // octal/hex encoded IPs (0x7f000001, 0177.0.0.1) that might not be
+  // caught if the runtime does not normalise them.
+  if (/^(0x[0-9a-f]+|\d{4,}|0\d+)$/i.test(hostname)) {
+    return false;
+  }
+
+  // Block hostnames with no TLD (single-label names like "metadata",
+  // "internal", etc.) which often resolve to internal infrastructure
+  // in cloud environments (e.g., GCP metadata server at "metadata").
+  if (!hostname.includes('.')) {
+    return false;
+  }
+
+  // Block cloud metadata endpoints
+  if (
+    hostname === 'metadata.google.internal' ||
+    hostname.endsWith('.internal') ||
+    hostname === 'instance-data' ||
+    hostname === '169.254.169.254'  // caught above, but explicit for clarity
+  ) {
+    return false;
   }
 
   return true;
+}
+
+/**
+ * DNS-pinning lookup function for SSRF protection.
+ *
+ * Node's http/https modules call the `lookup` option *once* per request to
+ * resolve the hostname, and use the returned IP for the actual TCP connection.
+ * By validating the resolved IP here, we ensure the IP we checked is the IP
+ * we connect to — defeating DNS-rebinding attacks where the hostname resolves
+ * to a public IP during URL validation but to a private IP at connection time.
+ *
+ * This is the connection-time IP validation layer recommended by the reviewer.
+ */
+function safeDnsLookup(
+  hostname: string,
+  options: dns.LookupOptions,
+  callback: (err: NodeJS.ErrnoException | null, address: string, family: number) => void,
+): void {
+  dns.lookup(hostname, options, (err, address, family) => {
+    if (err) return callback(err, address, family);
+
+    // Handle both single-result and all-results modes.
+    // When options.all is true, dns.lookup returns an array — but Node's
+    // http/https `lookup` option always calls with all=false (single result).
+    // We handle both defensively.
+    const addresses = Array.isArray(address)
+      ? (address as Array<{ address: string; family: number }>)
+      : [{ address: address as string, family: family as number }];
+
+    for (const entry of addresses) {
+      const addr = entry.address;
+      const fam = entry.family;
+
+      if (fam === 4) {
+        const parts = addr.split('.').map(Number);
+        if (parts.length === 4 && isPrivateIPv4(parts[0], parts[1], parts[2], parts[3])) {
+          const dnsErr: NodeJS.ErrnoException = new Error(
+            `SSRF blocked: DNS resolved ${hostname} to private IP ${addr}`,
+          );
+          dnsErr.code = 'ECONNREFUSED';
+          return callback(dnsErr, addr, fam);
+        }
+      } else if (fam === 6) {
+        // Check both raw IPv6 and IPv4-mapped forms.
+        // DNS may return an IPv4-mapped IPv6 address like ::ffff:127.0.0.1
+        // which must be validated against the IPv4 blocklist too.
+        if (isPrivateIPv6(`[${addr}]`)) {
+          const dnsErr: NodeJS.ErrnoException = new Error(
+            `SSRF blocked: DNS resolved ${hostname} to private IPv6 ${addr}`,
+          );
+          dnsErr.code = 'ECONNREFUSED';
+          return callback(dnsErr, addr, fam);
+        }
+
+        // Also check if the IPv6 address is an IPv4-mapped form that
+        // isPrivateIPv6 might not catch (defense-in-depth):
+        const v4Mapped = addr.match(/^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/i);
+        if (v4Mapped) {
+          const parts = v4Mapped[1].split('.').map(Number);
+          if (isPrivateIPv4(parts[0], parts[1], parts[2], parts[3])) {
+            const dnsErr: NodeJS.ErrnoException = new Error(
+              `SSRF blocked: DNS resolved ${hostname} to mapped private IP ${addr}`,
+            );
+            dnsErr.code = 'ECONNREFUSED';
+            return callback(dnsErr, addr, fam);
+          }
+        }
+      }
+    }
+
+    callback(null, address as string, family as number);
+  });
 }
 
 // Intentional outbound requests: this function fetches remote images
 // referenced in HTML source files and embeds them as base64 data URIs to
 // produce self-contained HTML snapshots. URLs are validated by isSafeUrl()
 // to block SSRF against private/internal networks.  [CodeQL js/file-access-to-http]
+//
+// SSRF protection layers (defence-in-depth):
+//  1. isSafeUrl()       — pre-connection URL-level validation
+//  2. safeDnsLookup()   — connection-time DNS resolution validation (DNS pinning)
+//  3. redirect recheck  — every redirect destination re-validated via (1) + (2)
+//  4. MAX_REDIRECTS     — redirect-loop limit (5 hops)
+//
+// Automatic redirects are NOT used. Node's http.get() returns 3xx responses
+// to the callback; we manually parse Location, validate, and recurse.
 function fetchAndEncode(url: string, timeout: number, redirectCount = 0): Promise<string> {
   if (imgCache.has(url)) return Promise.resolve(imgCache.get(url)!);
   if (!isImageUrl(url)) {
@@ -320,7 +560,7 @@ function fetchAndEncode(url: string, timeout: number, redirectCount = 0): Promis
       return;
     }
 
-    // SSRF protection: block requests to private/internal networks
+    // Layer 1: Pre-connection URL-level SSRF check
     if (!isSafeUrl(parsedUrl)) {
       const fallback =
         'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
@@ -331,11 +571,20 @@ function fetchAndEncode(url: string, timeout: number, redirectCount = 0): Promis
     }
 
     const client = parsedUrl.protocol === 'https:' ? https : http;
+    // Layer 2: DNS-pinning — safeDnsLookup validates the resolved IP
+    // before the connection is established.  Node uses the IP returned
+    // by lookup for the actual TCP socket, so the validated IP IS the
+    // connected IP.  This defeats DNS rebinding.
+    // agent: false disables connection pooling/reuse.  This ensures every
+    // request goes through safeDnsLookup — a reused connection would skip
+    // the lookup callback entirely, bypassing DNS-pinning validation.
     const req = client.get(
       url,
       {
         headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SnapshotBot/2.0)' },
         timeout,
+        lookup: safeDnsLookup as typeof dns.lookup,
+        agent: false,
       },
       (resp) => {
         if (
@@ -350,6 +599,32 @@ function fetchAndEncode(url: string, timeout: number, redirectCount = 0): Promis
           } catch {
             redirectUrl = resp.headers.location;
           }
+
+          // --- Security: Revalidate redirect destination against SSRF rules ---
+          // An attacker-controlled server can return a 302 redirect to a
+          // private/internal IP, bypassing the initial isSafeUrl() check.
+          let redirectParsed: URL;
+          try {
+            redirectParsed = new URL(redirectUrl);
+          } catch {
+            const fallback =
+              'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+            console.warn(`  WARN: Invalid redirect URL: ${redirectUrl.slice(0, 70).replace(/\n|\r/g, '')}...`);
+            imgCache.set(url, fallback);
+            resp.resume();
+            resolve(fallback);
+            return;
+          }
+          if (!isSafeUrl(redirectParsed)) {
+            const fallback =
+              'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+            console.warn(`  WARN: Blocked redirect to non-public URL: ${redirectUrl.slice(0, 70).replace(/\n|\r/g, '')}...`);
+            imgCache.set(url, fallback);
+            resp.resume();
+            resolve(fallback);
+            return;
+          }
+
           // Consume response body to free the socket
           resp.resume();
           fetchAndEncode(redirectUrl, timeout, redirectCount + 1).then(resolve);
