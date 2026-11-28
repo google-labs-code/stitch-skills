@@ -14,12 +14,22 @@ This is the first step in creating a design system from a markdown file.
 > MCP tool. The script handles base64 encoding in-process, avoiding the model's
 > output token limit.
 
+When installed as a plugin:
 ```bash
-python3 <SKILL_DIR>/scripts/upload_to_stitch.py \
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/upload-to-stitch/scripts/upload_to_stitch.py" \
   --project-id <PROJECT_ID> \
   --file-path /path/to/DESIGN.md \
   --api-key <API_KEY>
 ```
+
+When running from a repository clone:
+```bash
+python3 plugins/stitch-design/skills/upload-to-stitch/scripts/upload_to_stitch.py \
+  --project-id <PROJECT_ID> \
+  --file-path /path/to/DESIGN.md \
+  --api-key <API_KEY>
+```
+*(Or `<UPLOAD_TO_STITCH_SKILL_DIR>/scripts/upload_to_stitch.py` relative to the `upload-to-stitch` skill).*
 
 ---
 

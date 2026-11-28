@@ -64,13 +64,25 @@ design system in Stitch.
 
 1. **Upload `DESIGN.md`**:
    - **Option A (Recommended - Uploader Script)**: Use the modified `upload-to-stitch` Python script which natively handles `.md` files. It base64-encodes the markdown file in-process and sends it to the `/v1/projects/{projectId}/screens:batchCreate` endpoint, bypassing output token limits.
+
+     When installed as a plugin (e.g. Claude Code):
      ```bash
-     python3 stitch-skills/plugins/stitch-design/skills/upload-to-stitch/scripts/upload_to_stitch.py \
+     python3 "${CLAUDE_PLUGIN_ROOT}/skills/upload-to-stitch/scripts/upload_to_stitch.py" \
        --project-id <PROJECT_ID> \
        --file-path /path/to/DESIGN.md \
        --api-key <API_KEY> \
        --generated-by <GENERATED_BY>
      ```
+
+     When running from a repository clone:
+     ```bash
+     python3 plugins/stitch-design/skills/upload-to-stitch/scripts/upload_to_stitch.py \
+       --project-id <PROJECT_ID> \
+       --file-path /path/to/DESIGN.md \
+       --api-key <API_KEY> \
+       --generated-by <GENERATED_BY>
+     ```
+     *(Or `<UPLOAD_TO_STITCH_SKILL_DIR>/scripts/upload_to_stitch.py` relative to the `upload-to-stitch` skill).*
      Set `<GENERATED_BY>` to identify the skill or tool that produced the
      `DESIGN.md`. Use the calling skill name when invoked from another skill
      (e.g. `stitch::code-to-design`), or the agent/tool name for standalone
