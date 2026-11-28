@@ -19,9 +19,30 @@ if [ -z "$URL" ] || [ -z "$OUTPUT" ]; then
   echo "Usage: $0 <url> <output_path>"
   exit 1
 fi
+
+# --- Security: Validate URL scheme to prevent shell injection / SSRF ---
+# Only allow http:// and https:// URLs.  Reject file://, ftp://, gopher://,
+# and anything that could be interpreted as a curl option (starting with "-").
+case "$URL" in
+  https://*|http://*) ;;
+  *)
+    echo "Error: Only http:// and https:// URLs are allowed. Got: $URL"
+    exit 1
+    ;;
+esac
+
+# --- Security: Validate OUTPUT path to prevent path traversal ---
 mkdir -p "$(dirname "$OUTPUT")"
+OUTPUT_REAL="$(cd "$(dirname "$OUTPUT")" && pwd)/$(basename "$OUTPUT")"
+case "$OUTPUT_REAL" in
+  /dev/*|/proc/*|/sys/*|/etc/*)
+    echo "Error: Output path targets a sensitive system directory."
+    exit 1
+    ;;
+esac
+
 echo "Initiating high-reliability fetch for Stitch HTML..."
-curl -L -f -sS --connect-timeout 10 --compressed "$URL" -o "$OUTPUT"
+curl -L -f -sS --connect-timeout 10 --compressed -o "$OUTPUT" -- "$URL"
 if [ $? -eq 0 ]; then
   echo "Successfully retrieved HTML at: $OUTPUT"
   exit 0
