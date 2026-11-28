@@ -124,6 +124,9 @@ def call_batch_create_screens(
     print(f"HTTP Error {e.code}: {e.reason}")
     print(f"Response: {error_body}")
     sys.exit(1)
+  except urllib.error.URLError as e:
+    print(f"URL Error: {e.reason}")
+    sys.exit(1)
 
 
 def build_screen_request(
@@ -215,6 +218,21 @@ def parse_args():
           " (HTML/markdown uploads only)."
       ),
   )
+  parser.add_argument(
+      "--create-screen-instances",
+      dest="create_screen_instances",
+      action="store_true",
+      default=True,
+      help=(
+          "Create screen instances for display in the canvas. Defaults to True."
+      ),
+  )
+  parser.add_argument(
+      "--no-create-screen-instances",
+      dest="create_screen_instances",
+      action="store_false",
+      help="Do not create screen instances.",
+  )
   return parser.parse_args()
 
 
@@ -257,7 +275,7 @@ def main():
       api_key=args.api_key,
       project_id=args.project_id,
       requests=[screen_request],
-      create_screen_instances=True,
+      create_screen_instances=args.create_screen_instances,
   )
 
   print("\nResponse:")

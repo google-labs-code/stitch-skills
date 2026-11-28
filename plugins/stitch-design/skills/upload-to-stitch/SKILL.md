@@ -61,7 +61,8 @@ python3 <SKILL_DIR>/scripts/upload_to_stitch.py \
   --api-key <API_KEY> \
   [--api-url <STITCH_API_URL>] \
   [--title <SCREEN_TITLE>] \
-  [--generated-by <GENERATED_BY>]
+  [--generated-by <GENERATED_BY>] \
+  [--create-screen-instances]
 ```
 
 > [!TIP]
@@ -99,3 +100,4 @@ The script auto-detects MIME type from the file extension.
 - `--api-url`: Optional. Base URL of the Stitch API. Defaults to `https://stitch.googleapis.com`.
 - `--title`: Optional. Title for the uploaded screen. When uploading extracted HTML from a web app, set this to the **route path** of the page (e.g., `'/dashboard'`, `'/settings/profile'`, `'/inbox'`) so that the screen name/title in Stitch clearly identifies the route.
 - `--generated-by`: Optional. Specify how the uploaded file was generated (e.g., 'stitch::extract-static-html' skill, 'Claude Code', 'Codex', 'Gemini' etc.).
+- `--create-screen-instances` / `--no-create-screen-instances`: Optional. Whether to create screen instances for canvas display (defaults to true).
