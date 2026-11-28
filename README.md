@@ -8,7 +8,7 @@ A collection of agent skills and plugins for [Google Stitch](https://stitch.with
 The fastest way to set up the full Stitch plugin suite globally.
 
 #### Codex
-
+a
 Add the Stitch Skills marketplace, then install the plugins you need.
 
 <details open>
@@ -47,15 +47,45 @@ Once the marketplace is registered, install any combination of:
 - **`stitch-build`** — build and component skills
 - **`stitch-utilities`** — utility and helper skills
 
-#### Claude Code & Cursor
+#### Claude Code
 
 ```bash
 # Claude Code — installs into the current project
 npx plugins add google-labs-code/stitch-skills --scope project --target claude-code
 ```
 
+#### Cursor
+
+Use **`npx skills add`** so skills are registered for the Cursor agent and appear in the **`/`** menu. The `npx plugins add … --target cursor` path copies plugin files on Windows but does **not** reliably expose skills in **`/`**.
+
 ```bash
-# Cursor — installs into the current workspace
+# Cursor — global install (available in all workspaces)
+npx skills add google-labs-code/stitch-skills -g -a cursor -y --skill "*"
+```
+
+```bash
+# Cursor — install specific skills only
+npx skills add google-labs-code/stitch-skills -g -a cursor -y \
+  --skill "generate-design" --skill "stitch-loop"
+```
+
+```bash
+# List available skills without installing
+npx skills add google-labs-code/stitch-skills --list
+```
+
+After installing, **restart Cursor** and invoke skills from **`/`** (for example `/stitch-generate-design`, `/design-md`, `/stitch-loop`).
+
+> [!NOTE]
+> **`npx skills add`** installs into `~/.agents/skills/` and registers copies for Cursor. Skills whose package name uses the `stitch::…` prefix are installed under kebab-case folder names (for example `stitch::generate-design` → `/stitch-generate-design`).
+
+> [!WARNING]
+> **Windows — `npx plugins add … --target cursor`:** You may see `Warning: Cursor was not detected on this system.` The plugins CLI uses `which cursor`, which is not available on Windows, so this is often a **false negative**. Installation may still complete under `~/.cursor/extensions/`, but skills may **not** appear in **`/`**. Prefer **`npx skills add`** for Cursor.
+
+**Alternative (plugin packaging):** use this only if you explicitly want the extension layout under `~/.cursor/extensions/`. For agent skills and **`/`** invocation, use **`npx skills add`** above.
+
+```bash
+# Cursor — installs plugin bundles into the current workspace (extensions layout)
 npx plugins add google-labs-code/stitch-skills --scope workspace --target cursor
 ```
 
