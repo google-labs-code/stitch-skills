@@ -32,15 +32,20 @@ Usage:
 import argparse
 import base64
 import json
+import os
 import pathlib
 import sys
 from typing import Any
+import urllib.error
 import urllib.request
 
 try:
   import ssl
   import certifi
-  _SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
+  # SKILL.md documents SSL_CERT_FILE for custom/corporate CA bundles; it
+  # must win over certifi, which used to be picked unconditionally here.
+  _SSL_CONTEXT = ssl.create_default_context(
+      cafile=os.environ.get("SSL_CERT_FILE") or certifi.where())
 except ImportError:
   _SSL_CONTEXT = None
 
@@ -61,6 +66,20 @@ def encode_file(path: pathlib.Path) -> str:
   """Read and base64-encode a file."""
   with open(path, "rb") as f:
     return base64.b64encode(f.read()).decode("utf-8")
+
+
+def _normalize_project_id(project_id: str) -> str:
+  """Return the bare project id, stripping an optional 'projects/' prefix.
+
+  list_projects returns resource names like 'projects/12345', but the
+  BatchCreateScreens URL and parent need the bare id; passing the resource
+  name through duplicated the prefix.
+  """
+  normalized = project_id.removeprefix("projects/")
+  if not normalized:
+    print("Error: --project-id must not be empty.")
+    sys.exit(1)
+  return normalized
 
 
 def call_batch_create_screens(
@@ -86,6 +105,7 @@ def call_batch_create_screens(
   Returns:
     Parsed JSON response dict.
   """
+  project_id = _normalize_project_id(project_id)
   url = f"{api_url.rstrip('/')}/v1/projects/{project_id}/screens:batchCreate"
 
   payload = {
@@ -112,15 +132,19 @@ def call_batch_create_screens(
       urlopen_kwargs["context"] = _SSL_CONTEXT
     with urlopen(req, **urlopen_kwargs) as resp:
       print(f"urlopen returned. Status: {resp.getcode()}")
-      body = resp.read().decode("utf-8")
+      body = resp.read().decode("utf-8", errors="replace")
       print(f"Response status: {resp.getcode()}")
       print(f"Response body (first 1000 chars): {body[:1000]}")
       if not body:
         print("Error: Empty response body")
         sys.exit(1)
-      return json.loads(body)
+      try:
+        return json.loads(body)
+      except json.JSONDecodeError:
+        print("Error: Response was not valid JSON")
+        sys.exit(1)
   except urllib.error.HTTPError as e:
-    error_body = e.read().decode("utf-8")
+    error_body = e.read().decode("utf-8", errors="replace")
     print(f"HTTP Error {e.code}: {e.reason}")
     print(f"Response: {error_body}")
     sys.exit(1)
@@ -252,6 +276,10 @@ def main():
 
   if not file_path.exists():
     print(f"Error: File not found: {file_path}")
+    sys.exit(1)
+
+  if not file_path.is_file():
+    print(f"Error: Not a file: {file_path}")
     sys.exit(1)
 
   if args.generated_by and mime_type not in ("text/html", "text/markdown"):
