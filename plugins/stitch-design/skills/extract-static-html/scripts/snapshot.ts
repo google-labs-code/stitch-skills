@@ -26,9 +26,10 @@
  *   --json          Output machine-readable JSON stats to stdout
  */
 
-import puppeteer, { type Browser } from 'puppeteer';
+import puppeteer, { type Browser, type Frame } from 'puppeteer';
 import path from 'node:path';
 import fs from 'node:fs';
+import { shouldInlineFrame } from './frame_policy.ts';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -50,6 +51,7 @@ interface Opts {
   inlineFonts: boolean;
   removeSelectors: string | null;
   click: string | null;
+  allowCrossOriginFrames: boolean;
 }
 
 interface Stats {
@@ -71,6 +73,13 @@ interface Stats {
 // ---------------------------------------------------------------------------
 // Argument parsing
 // ---------------------------------------------------------------------------
+/** URLs of a frame and each of its ancestors, nearest first. */
+function frameChain(frame: Frame | null): string[] {
+  const chain: string[] = [];
+  for (let f = frame; f; f = f.parentFrame()) chain.push(f.url());
+  return chain;
+}
+
 function parseArgs(): Opts {
   const args = process.argv.slice(2);
   const opts: Opts = {
@@ -90,6 +99,7 @@ function parseArgs(): Opts {
     inlineFonts: false,
     removeSelectors: null,
     click: null,
+    allowCrossOriginFrames: false,
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -142,6 +152,9 @@ function parseArgs(): Opts {
       case '--click':
         opts.click = args[++i];
         break;
+      case '--allow-cross-origin-frames':
+        opts.allowCrossOriginFrames = true;
+        break;
       case '--help':
         console.log(`
 Usage: npx tsx snapshot.ts --url <URL> --output <FILE> [options]
@@ -160,6 +173,10 @@ Options:
   --timeout       Global timeout in ms (default: 60000)
   --concurrency   Max concurrent resource fetches (default: 6)
   --json          Output machine-readable JSON stats
+  --allow-cross-origin-frames
+                  Merge cross-origin iframe content into the parent page.
+                  Only use on trusted pages: the parent page's scripts can
+                  read the merged content.
 `);
         process.exit(0);
       default:
@@ -740,6 +757,17 @@ async function snapshot(opts: Opts): Promise<void> {
         try {
           const frameUrl = frame.url();
           const cleanUrl = frameUrl.split('?')[0].split('#')[0];
+
+          // Security: Puppeteer bypasses the Same-Origin Policy, so merging a
+          // cross-origin child into its parent would expose the child's
+          // content to the parent origin's running scripts.  Only merge
+          // same-origin frames unless the user explicitly opted in.
+          if (!shouldInlineFrame(frameChain(frame), frameChain(frame.parentFrame()), opts.allowCrossOriginFrames)) {
+            const msg = `Skipped cross-origin iframe ${cleanUrl} (use --allow-cross-origin-frames on trusted pages only)`;
+            console.warn(`⚠️  ${msg}`);
+            stats.warnings.push(msg);
+            continue;
+          }
           console.log(`📦 Extracting frame content from: ${cleanUrl} (depth: ${frame.parentFrame() ? 'nested' : 'root'})`);
 
           // Inject __name mock to prevent esbuild helper ReferenceError in child frame

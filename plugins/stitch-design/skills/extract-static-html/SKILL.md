@@ -92,6 +92,7 @@ Launches headless Chrome, captures the fully rendered DOM, and produces a self-c
 | `--title` | — | Override page title (set to the route path, e.g. `/dashboard` or `/settings/profile`) |
 | `--auth-script` | — | Path to a JS/TS module that exports a default `async (page) => void` function for authentication |
 | `--inline-canvas` | `false` | Convert `<canvas>` elements (ECharts, Chart.js, D3) to base64 `<img>` tags |
+| `--allow-cross-origin-frames` | `false` | Also merge cross-origin `<iframe>` content into the snapshot. Off by default because the parent page's scripts can read merged content; only enable for trusted pages. |
 
 ### What It Does Automatically
 
